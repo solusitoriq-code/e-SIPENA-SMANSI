@@ -1,0 +1,10 @@
+00. NASKAH FIX CETAK/
+00. NASKAH GABUNGAN/
+Kumpulan Cover - Antologi - QRCBN.pdf
+*.docx
+*.cdr
+*.pdf
+node_modules/
+dist-cf/
+.DS_Store
+Thumbs.db

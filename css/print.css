@@ -1,0 +1,97 @@
+/* ==========================================================================
+   e-SIPENA SMA Negeri 1 Sidayu — Gaya Cetak Lembar QR A4
+   Mereset paksa rotasi landscape dan batasan 16:9 agar bersih di kertas A4
+   ========================================================================== */
+
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  html,
+  body {
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    display: block !important;
+  }
+
+  #app-container,
+  body[data-rotate="90"] #app-container,
+  body[data-rotate="270"] #app-container {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  .top-hud,
+  .nav-drawer,
+  .drawer-backdrop,
+  .modal-backdrop,
+  .toast-container,
+  .panel-header,
+  .toolbar-row,
+  #btn-print-qr {
+    display: none !important;
+  }
+
+  .stage-main {
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .hub-panel {
+    display: none !important;
+  }
+
+  .hub-panel[data-panel="cetak-qr"] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .panel-body-scroll,
+  .print-sheet {
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+
+  .qr-print-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #0f294a;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .qr-print-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .qr-print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #94a3b8 !important;
+    border-radius: 6px;
+    padding: 8px;
+    text-align: center;
+  }
+}

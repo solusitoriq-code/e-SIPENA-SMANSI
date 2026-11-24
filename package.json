@@ -1,0 +1,15 @@
+{
+  "name": "esipena-smansi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portal Literasi Digital e-SIPENA SMA Negeri 1 Sidayu",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node -e \"import('node:fs').then(fs => { JSON.parse(fs.readFileSync('data/esipena_data.json','utf8')); console.log('esipena_data.json valid'); })\""
+  },
+  "devDependencies": {
+    "mupdf": "^1.24.11",
+    "sharp": "^0.33.5"
+  }
+}

@@ -1,0 +1,28 @@
+# Sumber mentah & dokumen cetak berukuran besar (> 25 MiB limit Cloudflare Pages)
+00. NASKAH FIX CETAK/
+00. NASKAH GABUNGAN/
+Kumpulan Cover - Antologi - QRCBN.pdf
+*.docx
+*.cdr
+*.pdf
+.DS_Store
+Thumbs.db
+
+# Perkakas dev, backend SQL, dan server lokal
+node_modules/
+scripts/
+dist-cf/
+server.js
+package.json
+package-lock.json
+supabase/
+google-apps-script/
+
+# Dokumentasi perencanaan & memori AI
+AGENTS.md
+PROGRESS.md
+PRD.md
+SESSION_PROMPTS.md
+README.md
+DEPLOY_CLOUDFLARE_PAGES.md
+.git/
