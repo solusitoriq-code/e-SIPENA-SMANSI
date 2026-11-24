@@ -34,13 +34,12 @@ export function syncModalHeaderFsUi(triggerResize = false) {
 }
 
 /**
- * Mengaktifkan atau keluar dari mode layar penuh browser disertai kunci orientasi landscape.
+ * Mengaktifkan atau keluar dari mode layar penuh browser tanpa memaksa rotasi orientasi.
  */
 export async function toggleBrowserFullscreen() {
   try {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
-      await window.screen?.orientation?.lock?.('landscape').catch(() => {});
     } else {
       await document.exitFullscreen();
     }

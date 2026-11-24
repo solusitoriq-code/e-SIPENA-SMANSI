@@ -24,11 +24,17 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.glb': 'model/gltf-binary',
+  '.mpeg': 'audio/mpeg',
+  '.mp3': 'audio/mpeg',
+  '.m4a': 'audio/mp4',
+  '.ogg': 'audio/ogg',
+  '.wav': 'audio/wav',
   '.txt': 'text/plain; charset=utf-8'
 };
 
 const SPA_ROUTES = new Set([
-  '/', '/rak', '/budaya', '/mading', '/pustakawan', '/kirim', '/lacak', '/kelola', '/cetak-qr'
+  '/', '/rak', '/pameran-3d', '/mading', '/pustakawan', '/kirim', '/lacak', '/kelola', '/cetak-qr'
 ]);
 
 function getContentType(filePath) {

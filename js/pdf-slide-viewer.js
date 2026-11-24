@@ -7,37 +7,13 @@
 import { playSfx } from './audio.js';
 import { SafeStorage } from './data-service.js';
 import { bindHorizontalSwipe } from './nav-controls.js';
+import { ensurePdfJsLoaded } from './pdf-cache.js';
 import { escapeHtml } from './ui-utils.js';
 
-const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build';
-const PDFJS_LIB_URL = `${PDFJS_BASE}/pdf.min.mjs`;
-const PDFJS_WORKER_URL = `${PDFJS_BASE}/pdf.worker.min.mjs`;
-
-let pdfJsPromise = null;
-let cachedWorkerUrl = '';
-
-async function ensurePdfJsLoaded() {
-  if (!pdfJsPromise) {
-    pdfJsPromise = (async () => {
-      const pdfjsLib = await import(PDFJS_LIB_URL);
-      if (!cachedWorkerUrl) {
-        const workerRes = await fetch(PDFJS_WORKER_URL);
-        if (!workerRes.ok) throw new Error('Gagal memuat worker PDF.js');
-        const workerBlob = new Blob([await workerRes.arrayBuffer()], { type: 'application/javascript' });
-        cachedWorkerUrl = URL.createObjectURL(workerBlob);
-      }
-      pdfjsLib.GlobalWorkerOptions.workerSrc = cachedWorkerUrl;
-      return pdfjsLib;
-    })().catch((err) => {
-      pdfJsPromise = null;
-      throw err;
-    });
-  }
-  return pdfJsPromise;
-}
-
-function isWideReaderScreen() {
-  return typeof window !== 'undefined' && window.innerWidth >= 820 && window.innerHeight >= 520;
+function isWideReaderViewport(viewportEl) {
+  const w = viewportEl?.clientWidth || window.innerWidth;
+  const h = viewportEl?.clientHeight || window.innerHeight;
+  return w >= 780 && h >= 440 && w > h;
 }
 
 /**
@@ -54,13 +30,18 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
   const pageStorageKey = `esipena_pdf_page_${String(bookId || 'book')}`;
   const savedPage = Number(SafeStorage.getItem(pageStorageKey) || 1);
   let currentPage = Number.isFinite(savedPage) && savedPage >= 1 && savedPage <= totalPages ? savedPage : 1;
-  let twoPageMode = totalPages > 1 && isWideReaderScreen();
+  let twoPageMode = false;
+  let userLockedLayout = false;
+  let fitWidthMode = false;
   let zoomFactor = 1.0;
   let isExpanded = false;
   let renderGen = 0;
   let activeRenderTask = null;
   let flipTimer = null;
   let hudTimer = null;
+  let resizeTimer = null;
+  let lastVpW = 0;
+  let lastVpH = 0;
   let pointerInsideToolbar = false;
   let destroyed = false;
 
@@ -90,7 +71,8 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
         <button type="button" class="page-btn" id="pdf-btn-next" aria-label="Halaman PDF berikutnya">Hal &rsaquo;</button>
       </div>
       <div class="pdf-slide-zoom-group">
-        <button type="button" class="page-btn" id="pdf-btn-layout" aria-pressed="${twoPageMode ? 'true' : 'false'}" ${totalPages <= 1 ? 'disabled' : ''}>${twoPageMode ? '2 Hal' : '1 Hal'}</button>
+        <button type="button" class="page-btn" id="pdf-btn-layout" aria-pressed="false" ${totalPages <= 1 ? 'disabled' : ''}>1 Hal</button>
+        <button type="button" class="page-btn" id="pdf-btn-fit" aria-pressed="false" aria-label="Beralih mode pas layar atau pas lebar">Pas Lebar</button>
         <button type="button" class="page-btn" id="pdf-zoom-out" aria-label="Perkecil halaman">-</button>
         <span class="page-indicator" id="pdf-zoom-label">100%</span>
         <button type="button" class="page-btn" id="pdf-zoom-in" aria-label="Perbesar halaman">+</button>
@@ -108,6 +90,7 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
   const pageInput = stageEl.querySelector('#pdf-page-input');
   const totalLabel = stageEl.querySelector('#pdf-page-total-label');
   const layoutBtn = stageEl.querySelector('#pdf-btn-layout');
+  const fitBtn = stageEl.querySelector('#pdf-btn-fit');
   const zoomOutBtn = stageEl.querySelector('#pdf-zoom-out');
   const zoomInBtn = stageEl.querySelector('#pdf-zoom-in');
   const zoomLabel = stageEl.querySelector('#pdf-zoom-label');
@@ -119,6 +102,8 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
   const spineEl = stageEl.querySelector('#pdf-spread-spine');
   const flipLeaf = stageEl.querySelector('#pdf-flip-leaf');
   const flipLeafCanvas = stageEl.querySelector('#pdf-flip-leaf-canvas');
+
+  twoPageMode = totalPages > 1 && isWideReaderViewport(viewportEl);
 
   const scheduleHudHide = (delayMs = 2800) => {
     if (hudTimer) window.clearTimeout(hudTimer);
@@ -157,8 +142,12 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
       layoutBtn.textContent = twoPageMode ? '2 Hal' : '1 Hal';
       layoutBtn.setAttribute('aria-pressed', twoPageMode ? 'true' : 'false');
     }
+    if (fitBtn) {
+      fitBtn.textContent = fitWidthMode ? 'Pas Layar' : 'Pas Lebar';
+      fitBtn.setAttribute('aria-pressed', fitWidthMode ? 'true' : 'false');
+    }
     if (zoomLabel) zoomLabel.textContent = `${Math.round(zoomFactor * 100)}%`;
-    if (viewportEl) viewportEl.classList.toggle('is-zoomed', zoomFactor > 1.05);
+    if (viewportEl) viewportEl.classList.toggle('is-zoomed', zoomFactor > 1.05 || fitWidthMode);
     if (zoomOutBtn instanceof HTMLButtonElement) zoomOutBtn.disabled = zoomFactor <= 0.7;
     if (zoomInBtn instanceof HTMLButtonElement) zoomInBtn.disabled = zoomFactor >= 2.0;
     if (fsBtn) {
@@ -208,7 +197,9 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
     if (destroyed || myGen !== renderGen) return;
 
     const baseVp = pdfPage.getViewport({ scale: 1 });
-    const fitScale = Math.min(slotW / Math.max(1, baseVp.width), availH / Math.max(1, baseVp.height));
+    const fitScale = fitWidthMode
+      ? slotW / Math.max(1, baseVp.width)
+      : Math.min(slotW / Math.max(1, baseVp.width), availH / Math.max(1, baseVp.height));
     const cssScale = Math.max(0.2, fitScale * zoomFactor);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
 
@@ -240,8 +231,10 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
       activeRenderTask = null;
     }
 
-    const availW = Math.max(220, (viewportEl.clientWidth || 720) - 14);
+    const availW = Math.max(220, (viewportEl.clientWidth || 720) - (fitWidthMode ? 24 : 14));
     const availH = Math.max(200, (viewportEl.clientHeight || 420) - 8);
+    lastVpW = viewportEl.clientWidth || 0;
+    lastVpH = viewportEl.clientHeight || 0;
     const slotW = twoPageMode && right ? Math.floor((availW - 14) / 2) : availW;
 
     try {
@@ -305,10 +298,20 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
     }
   };
 
-  const onResize = () => {
-    if (!destroyed && !stageEl.closest('[hidden]') && viewportEl instanceof HTMLElement && viewportEl.clientWidth > 40) {
-      renderSpread(0);
+  const handleResizeDebounced = () => {
+    if (destroyed || stageEl.closest('[hidden]') || !(viewportEl instanceof HTMLElement)) return;
+    const curW = viewportEl.clientWidth;
+    const curH = viewportEl.clientHeight;
+    if (curW <= 40 || (Math.abs(curW - lastVpW) <= 4 && Math.abs(curH - lastVpH) <= 4)) return;
+    if (!userLockedLayout && !fitWidthMode) {
+      twoPageMode = totalPages > 1 && isWideReaderViewport(viewportEl);
     }
+    renderSpread(0);
+  };
+
+  const onResize = () => {
+    if (resizeTimer) window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(handleResizeDebounced, 90);
   };
 
   const onHudClick = (el, fn) => el?.addEventListener('click', () => { fn(); revealHud(true); });
@@ -317,7 +320,21 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
   edgePrevBtn?.addEventListener('click', () => stepPage(-1));
   edgeNextBtn?.addEventListener('click', () => stepPage(1));
   pageInput?.addEventListener('change', () => { if (pageInput instanceof HTMLInputElement) jumpToPage(pageInput.value); revealHud(true); });
-  onHudClick(layoutBtn, () => { twoPageMode = !twoPageMode; playSfx('click'); renderSpread(0); });
+  onHudClick(layoutBtn, () => {
+    userLockedLayout = true;
+    twoPageMode = !twoPageMode;
+    if (twoPageMode) fitWidthMode = false;
+    playSfx('click');
+    renderSpread(0);
+  });
+  onHudClick(fitBtn, () => {
+    fitWidthMode = !fitWidthMode;
+    zoomFactor = 1.0;
+    if (fitWidthMode) twoPageMode = false;
+    else if (!userLockedLayout) twoPageMode = totalPages > 1 && isWideReaderViewport(viewportEl);
+    playSfx('click');
+    renderSpread(0);
+  });
   onHudClick(zoomOutBtn, () => { zoomFactor = Math.max(0.7, Math.round((zoomFactor - 0.2) * 10) / 10); playSfx('click'); renderSpread(0); });
   onHudClick(zoomInBtn, () => { zoomFactor = Math.min(2.0, Math.round((zoomFactor + 0.2) * 10) / 10); playSfx('click'); renderSpread(0); });
   fsBtn?.addEventListener('click', () => { playSfx('click'); setFullscreenState(!isExpanded); });
@@ -333,6 +350,12 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
   viewportEl?.addEventListener('click', (event) => {
     const target = event.target instanceof HTMLElement ? event.target : null;
     if (target?.closest('button, input, label')) return;
+    if (!fitWidthMode && zoomFactor <= 1.05) {
+      const rect = viewportEl.getBoundingClientRect();
+      const relX = (event.clientX - rect.left) / Math.max(1, rect.width);
+      if (relX <= 0.18) { stepPage(-1); return; }
+      if (relX >= 0.82) { stepPage(1); return; }
+    }
     if (stageEl.classList.contains('is-hud-hidden')) revealHud(true);
     else stageEl.classList.add('is-hud-hidden');
   });
@@ -352,6 +375,7 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
 
   document.addEventListener('keydown', onEscapeKey, true);
   window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
 
   await renderSpread(0);
   scheduleHudHide(2800);
@@ -362,9 +386,11 @@ export async function mountPdfSlideViewer({ stageEl, blob, bookId, title = 'Nove
       destroyed = true;
       if (flipTimer) window.clearTimeout(flipTimer);
       if (hudTimer) window.clearTimeout(hudTimer);
+      if (resizeTimer) window.clearTimeout(resizeTimer);
       if (activeRenderTask) { try { activeRenderTask.cancel(); } catch { /* Abaikan */ } }
       document.removeEventListener('keydown', onEscapeKey, true);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
       pdfDoc.destroy().catch(() => {});
     }
   };

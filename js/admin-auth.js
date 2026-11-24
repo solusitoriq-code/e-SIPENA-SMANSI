@@ -27,6 +27,10 @@ export function adminGetSession() {
     SafeStorage.removeItem(APP_CONFIG.STORAGE_KEYS.auth);
     return null;
   }
+  if (session.mode === 'demo' && isSupabaseConfigured()) {
+    SafeStorage.removeItem(APP_CONFIG.STORAGE_KEYS.auth);
+    return null;
+  }
   const expiresAt = Number(session.expires_at || 0);
   if (!expiresAt || Date.now() > expiresAt) {
     if (session.mode === 'supabase' && session.refresh_token) {

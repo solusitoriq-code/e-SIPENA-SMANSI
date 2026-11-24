@@ -9,6 +9,11 @@
     "check": "node --check server.js && node -e \"import('node:fs').then(fs => { JSON.parse(fs.readFileSync('data/esipena_data.json','utf8')); console.log('esipena_data.json valid'); })\""
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "draco3dgltf": "^1.5.9",
+    "meshoptimizer": "^1.3.0",
     "mupdf": "^1.24.11",
     "sharp": "^0.33.5"
   }

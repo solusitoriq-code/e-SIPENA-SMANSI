@@ -1,59 +1,61 @@
 /**
  * Modul Tampilan Komunitas & Edukasi (Fitur 3) — e-SIPENA SMAN 1 Sidayu
- * Mencakup: Jejak Budaya Gresik (5 topik), Mading Digital (8 karya awal), dan Sudut Pustakawan.
+ * Mencakup: Pameran 3D Gresik (AR & Narasi Suara), Mading Digital, dan Sudut Pustakawan.
  */
 
 import { APP_CONFIG } from './config.js';
 import { playSfx, stopSpeech } from './audio.js';
+import { createBookReaderController } from './book-reader-ui.js';
+import { openModel3dModal } from './model-3d-modal.js';
 import {
   bindSpeechToggleButton,
   buildWhatsAppUrl,
   createIcon,
   escapeHtml,
+  extractPlainLiteraryText,
   formatDateId,
   getRoleBadgeClass,
   openModal,
+  renderFormattedLiteraryHtml,
   renderSwipeCueHtml,
   resolveGDriveLinks
 } from './ui-utils.js';
-import {
-  extractYouTubeId,
-  mountInlinePlayer,
-  openVideoModal,
-  renderVideoPreviewHtml
-} from './yt-player.js';
 
 /**
- * Merender 5 topik Jejak Budaya Gresik lengkap dengan pemutar/placeholder YouTube,
- * artikel pemantik, serta tombol tulis karya bertema Budaya Gresik.
+ * Merender galeri Pameran 3D Gresik dengan gambar placeholder awal,
+ * narasi suara Web Speech API Bahasa Indonesia, dan modal penampil 3D/AR.
  * @param {HTMLElement | null} container
- * @param {{ topics: any[], onSelectTheme?: (themeTitle: string) => void }} [options]
+ * @param {{ models: any[] }} [options]
  */
-export function renderCulturePanel(container, { topics = [], onSelectTheme } = {}) {
+export function renderModels3dPanel(container, { models = [] } = {}) {
   if (!container) return;
-  if (!topics.length) {
-    container.innerHTML = `<article class="empty-stage-note"><h3>Topik Jejak Budaya Gresik Belum Tersedia</h3><p>Konten pemantik budaya lokal dapat ditambahkan kurator melalui Ruang Pengelola.</p></article>`;
+  if (!models.length) {
+    container.innerHTML = `<article class="empty-stage-note"><h3>Koleksi Pameran 3D Gresik Belum Tersedia</h3><p>Koleksi objek budaya 3D dan teks perkenalan dapat dikelola kurator melalui Ruang Pengelola.</p></article>`;
     return;
   }
 
-  container.innerHTML = `<div class="culture-grid">${topics
-    .map((topic, idx) => {
-      const safeId = escapeHtml(topic.id);
+  container.innerHTML = `<div class="models3d-grid">${models
+    .map((item, idx) => {
+      const safeId = escapeHtml(item.id);
+      const safeTitle = escapeHtml(item.title);
+      const posterSrc = escapeHtml(item.placeholder_url || 'assets/images/logo-smansi.webp');
       return `
-        <article class="culture-card" data-topic-id="${safeId}" data-nav-card="true">
-          ${renderVideoPreviewHtml(topic)}
-          <div class="culture-card-body">
-            <div class="culture-card-meta">
-              <span class="culture-index">Topik ${idx + 1}</span>
-              ${topic.is_placeholder ? '<span class="placeholder-pill">Placeholder</span>' : ''}
+        <article class="model3d-card" data-model-id="${safeId}" data-nav-card="true">
+          <div class="model3d-card-media" data-action="open-model-3d" data-model-id="${safeId}">
+            <img src="${posterSrc}" alt="Pratinjau ${safeTitle}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
+            <div class="model3d-card-badges">
+              <span class="model3d-badge-type">3D &amp; AR</span>
+              <span class="model3d-badge-cat">${escapeHtml(item.category || 'Budaya Gresik')}</span>
             </div>
-            <h3 class="culture-card-title">${escapeHtml(topic.title)}</h3>
-            <p class="culture-card-subtitle">${escapeHtml(topic.subtitle || '')}</p>
-            <p class="culture-card-summary">${escapeHtml(topic.article_summary || '')}</p>
-            <div class="culture-prompt-snippet"><strong>Tugas Tulis:</strong> ${escapeHtml(topic.writing_prompt || '')}</div>
-            <div class="culture-card-actions">
-              <button type="button" class="secondary-btn inline-action-btn" data-action="open-topic" data-topic-id="${safeId}">${createIcon('play')}<span>Tonton &amp; Baca</span></button>
-              <button type="button" class="primary-btn inline-action-btn" data-action="write-theme" data-topic-id="${safeId}">${createIcon('send')}<span>Tulis Karya</span></button>
+          </div>
+          <div class="model3d-card-body">
+            <div class="culture-card-meta">
+              <span class="culture-index">Koleksi ${idx + 1}</span>
+            </div>
+            <h3 class="model3d-card-title">${safeTitle}</h3>
+            <p class="model3d-card-intro">${escapeHtml(item.introduction || '')}</p>
+            <div class="model3d-card-actions">
+              <button type="button" class="primary-btn inline-action-btn" data-action="open-model-3d" data-model-id="${safeId}">${createIcon('cube')}<span>Lihat 3D &amp; AR</span></button>
             </div>
           </div>
         </article>
@@ -65,90 +67,122 @@ export function renderCulturePanel(container, { topics = [], onSelectTheme } = {
     const target = event.target instanceof HTMLElement ? event.target : null;
     if (!target) return;
 
-    const inlinePlayBtn = target.closest('[data-action="inline-play"]');
-    if (inlinePlayBtn instanceof HTMLElement) {
-      const frame = inlinePlayBtn.closest('.yt-frame');
-      const ytId = inlinePlayBtn.dataset.ytId || '';
-      if (frame instanceof HTMLElement && extractYouTubeId(ytId)) {
-        mountInlinePlayer(frame, ytId, inlinePlayBtn.dataset.ytTitle || 'Video Budaya Gresik');
-      }
-      return;
-    }
-
-    const openTopicBtn = target.closest('[data-action="open-topic"]');
-    if (openTopicBtn instanceof HTMLElement) {
-      const topic = topics.find((t) => String(t.id) === openTopicBtn.dataset.topicId);
-      if (topic) {
+    const openTrigger = target.closest('[data-action="open-model-3d"]');
+    if (openTrigger instanceof HTMLElement) {
+      const item = models.find((m) => String(m.id) === openTrigger.dataset.modelId);
+      if (item) {
         playSfx('pop');
-        openVideoModal(topic, { onWriteWithTheme: onSelectTheme });
-      }
-      return;
-    }
-
-    const writeBtn = target.closest('[data-action="write-theme"]');
-    if (writeBtn instanceof HTMLElement) {
-      const topic = topics.find((t) => String(t.id) === writeBtn.dataset.topicId);
-      if (topic) {
-        playSfx('pop');
-        onSelectTheme?.(topic.title || '');
+        openModel3dModal(item, models);
       }
     }
   };
 }
 
+function buildMadingMetaHtml(work) {
+  return `
+    <div class="mading-modal-badges">
+      <span class="status-tag is-lolos">${escapeHtml(work.status || 'Lolos Mading')}</span>
+      <span class="panel-badge">${escapeHtml(work.category || 'Karya')}</span>
+      <span class="${getRoleBadgeClass(work.author_role)}">${escapeHtml(work.author_role || 'Warga Sekolah')}</span>
+      <span class="panel-badge">${escapeHtml(work.author_class_unit || '-')}</span>
+      <span class="panel-badge">${escapeHtml(formatDateId(work.published_at))}</span>
+    </div>
+    <p class="mading-modal-author">Ditulis oleh <strong>${escapeHtml(work.author_name || '')}</strong>${work.tracking_code ? `<span class="code-chip">${escapeHtml(work.tracking_code)}</span>` : ''}</p>
+    ${work.culture_theme ? `<div class="mading-theme-banner">Tema Budaya Gresik: <strong>${escapeHtml(work.culture_theme)}</strong></div>` : ''}`;
+}
+
 /**
  * Membuka modal baca lengkap untuk satu karya Mading Digital.
+ * Karya berlampiran PDF dibuka penuh kanvas dengan pembaca PDF.js + cache offline;
+ * karya teks langsung tampil dalam modal baca sastra.
  * @param {Record<string, any>} work
  */
 export function openMadingWorkModal(work) {
   if (!work) return;
   const gdrive = resolveGDriveLinks(work);
-  const paragraphs = String(work.body_text || work.summary || '').split(/\n+/).map((p) => p.trim()).filter(Boolean);
-  const bodyHtml = paragraphs.length ? paragraphs.map((p) => `<p>${escapeHtml(p)}</p>`).join('') : '<p>Ringkasan karya belum tersedia.</p>';
-  const pdfBlock = gdrive.hasDriveFile
-    ? `<div class="mading-drive-box"><div class="reader-toolbar"><span>Naskah PDF Google Drive tersedia</span><a class="secondary-btn inline-action-btn" href="${escapeHtml(gdrive.openUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('external')}<span>Buka di Drive</span></a></div><iframe class="pdf-preview-iframe" src="${escapeHtml(gdrive.previewUrl)}" title="Pratinjau PDF ${escapeHtml(work.title)}" loading="lazy" allowfullscreen></iframe></div>`
-    : '';
+  const bodyHtml = renderFormattedLiteraryHtml(work.body_text || work.summary || '', 'Ringkasan karya belum tersedia.');
+  const metaHtml = buildMadingMetaHtml(work);
+  const bindTts = (bodyEl, label) => bindSpeechToggleButton(
+    bodyEl?.querySelector('#btn-mading-tts'),
+    () => `${work.title}, karya ${work.author_name}. ${extractPlainLiteraryText(work.body_text || work.summary || '')}`,
+    label,
+    'Hentikan Suara'
+  );
 
+  if (!gdrive.hasDriveFile) {
+    const bodyEl = openModal({
+      title: work.title || 'Karya Mading Digital',
+      wide: true,
+      allowFullscreen: true,
+      onClose: () => stopSpeech(),
+      html: `<div class="mading-modal-wrap">${metaHtml}<div class="mading-modal-controls"><button type="button" class="secondary-btn inline-action-btn" id="btn-mading-tts">${createIcon('volume')}<span>Dengar Karya</span></button></div><article class="literary-reader-paper">${bodyHtml}</article></div>`
+    });
+    bindTts(bodyEl, 'Dengar Karya');
+    return;
+  }
+
+  let readerController = null;
   const bodyEl = openModal({
     title: work.title || 'Karya Mading Digital',
     wide: true,
-    onClose: () => stopSpeech(),
-    html: `
-      <div class="mading-modal-wrap">
-        <div class="mading-modal-badges">
-          <span class="status-tag ${work.status === 'Masuk Antologi' ? 'is-antologi' : 'is-lolos'}">${escapeHtml(work.status || 'Lolos Mading')}</span>
-          <span class="panel-badge">${escapeHtml(work.category || 'Karya')}</span>
-          <span class="${getRoleBadgeClass(work.author_role)}">${escapeHtml(work.author_role || 'Warga Sekolah')}</span>
-          <span class="panel-badge">${escapeHtml(work.author_class_unit || '-')}</span>
-          <span class="panel-badge">${escapeHtml(formatDateId(work.published_at))}</span>
-        </div>
-        <p class="mading-modal-author">Ditulis oleh <strong>${escapeHtml(work.author_name || '')}</strong>${work.tracking_code ? `<span class="code-chip">${escapeHtml(work.tracking_code)}</span>` : ''}</p>
-        ${work.culture_theme ? `<div class="mading-theme-banner">Tema Budaya Gresik: <strong>${escapeHtml(work.culture_theme)}</strong></div>` : ''}
-        <div class="mading-modal-controls">
-          <button type="button" class="secondary-btn inline-action-btn" id="btn-mading-tts">${createIcon('volume')}<span>Dengar Karya</span></button>
-        </div>
-        <article class="literary-reader-paper">${bodyHtml}</article>
-        ${pdfBlock}
-      </div>
-    `
+    fullscreen: true,
+    headerTabsHtml: `<button type="button" class="modal-hdr-tab" role="tab" aria-selected="false" data-modal-pane="detail">Info &amp; Ringkasan</button><button type="button" class="modal-hdr-tab is-active" role="tab" aria-selected="true" data-modal-pane="reader" data-autofocus>Baca Naskah</button>`,
+    onClose: () => { stopSpeech(); readerController?.destroy(); },
+    html: `<div class="book-modal-shell">
+      <section class="book-modal-pane" data-pane="detail" hidden><div class="mading-modal-wrap">${metaHtml}<div class="mading-modal-controls"><button type="button" class="primary-btn inline-action-btn" id="btn-mading-switch-pdf">${createIcon('book')}<span>Baca Naskah (PDF)</span></button><button type="button" class="secondary-btn inline-action-btn" id="btn-mading-tts">${createIcon('volume')}<span>Dengar Ringkasan</span></button><a class="secondary-btn inline-action-btn" href="${escapeHtml(gdrive.openUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('external')}<span>Buka di Drive</span></a></div><article class="literary-reader-paper">${bodyHtml}</article></div></section>
+      <section class="book-modal-pane is-active" data-pane="reader"><div class="reader-stage-shell"><div class="reader-stage-view" data-reader-stage="drive"><div id="pdf-reader-stage-content" class="pdf-loading-note">Menyiapkan PDF naskah Mading...</div></div><div class="reader-stage-view" data-reader-stage="text" hidden><div id="text-offline-banner" class="offline-reader-notice" hidden></div><article class="literary-reader-paper">${bodyHtml}</article></div></div></section>
+    </div>`
+  });
+  if (!bodyEl) return;
+
+  const dialogEl = document.getElementById('app-modal');
+  dialogEl?.classList.add('is-reading-mode');
+  readerController = createBookReaderController({
+    bodyEl,
+    book: work,
+    gdrive,
+    animateCover: false,
+    onStageChange: (viewName) => {
+      for (const s of bodyEl.querySelectorAll('[data-reader-stage]')) s.toggleAttribute('hidden', s.getAttribute('data-reader-stage') !== viewName);
+      if (viewName === 'drive') window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
   });
 
-  bindSpeechToggleButton(
-    bodyEl?.querySelector('#btn-mading-tts'),
-    () => `${work.title}, karya ${work.author_name}. ${work.body_text || work.summary || ''}`,
-    'Dengar Karya',
-    'Hentikan Suara'
-  );
+  const setActivePane = (paneName) => {
+    const scopeEl = dialogEl || bodyEl;
+    for (const btn of scopeEl.querySelectorAll('[data-modal-pane]')) {
+      const active = btn.getAttribute('data-modal-pane') === paneName;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    }
+    for (const pane of bodyEl.querySelectorAll('[data-pane]')) {
+      const match = pane.getAttribute('data-pane') === paneName;
+      pane.toggleAttribute('hidden', !match);
+      pane.classList.toggle('is-active', match);
+    }
+    dialogEl?.classList.toggle('is-reading-mode', paneName === 'reader');
+    if (paneName === 'reader') {
+      readerController.activateReader();
+      window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
+  };
+
+  for (const btn of (dialogEl || bodyEl).querySelectorAll('[data-modal-pane]')) {
+    btn.addEventListener('click', () => { playSfx('click'); setActivePane(btn.getAttribute('data-modal-pane') || 'detail'); });
+  }
+  bodyEl.querySelector('#btn-mading-switch-pdf')?.addEventListener('click', () => { playSfx('pop'); setActivePane('reader'); });
+  bindTts(bodyEl, 'Dengar Ringkasan');
+  readerController.activateReader();
 }
 
 /**
  * Merender Mading Digital dengan filter peran, paginasi ringkas, dan modal baca karya.
  * @param {HTMLElement | null} container
- * @param {{ works: any[], roleFilter: string, page: number, pageSize?: number, onPageChange?: (nextPage: number) => void }} [options]
+ * @param {{ works: any[], roleFilter: string, page: number, pageSize?: number, onPageChange?: (nextPage: number) => void, onRequestSubmit?: () => void, onRequestTrack?: () => void }} [options]
  */
 export function renderMadingPanel(
   container,
-  { works = [], roleFilter = 'all', page = 1, pageSize = APP_CONFIG.MADING_PAGE_SIZE, onPageChange } = {}
+  { works = [], roleFilter = 'all', page = 1, pageSize = APP_CONFIG.MADING_PAGE_SIZE, onPageChange, onRequestSubmit, onRequestTrack } = {}
 ) {
   if (!container) return;
   const filtered = roleFilter === 'all'
@@ -156,7 +190,16 @@ export function renderMadingPanel(
     : works.filter((w) => String(w.author_role || '').toLowerCase() === roleFilter.toLowerCase());
 
   if (!filtered.length) {
-    container.innerHTML = `<article class="empty-stage-note"><h3>Belum Ada Karya pada Kategori Ini</h3><p>Pilih filter peran lain atau kirimkan karya terbaru Anda melalui tab Kirim &amp; Lacak.</p></article>`;
+    const emptyTitle = works.length ? 'Belum Ada Karya pada Kategori Ini' : 'Belum Ada Karya di Mading Digital';
+    const emptyDesc = works.length
+      ? 'Pilih filter peran lain, ajukan naskah terbaru, atau lacak status karya Anda.'
+      : 'Karya warga sekolah yang lolos kurasi akan tampil di sini. Gunakan tombol Ajukan Karya untuk mengirim naskah atau Lacak Karya Saya untuk memeriksa status kode SPN.';
+    container.innerHTML = `<article class="empty-stage-note"><h3>${emptyTitle}</h3><p>${emptyDesc}</p><div class="empty-stage-actions"><button type="button" class="primary-btn inline-action-btn" data-action="open-submit">${createIcon('send')}<span>Ajukan Karya</span></button><button type="button" class="secondary-btn inline-action-btn" data-action="open-track">${createIcon('search')}<span>Lacak Karya Saya</span></button></div></article>`;
+    container.onclick = (event) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.closest('[data-action="open-submit"]')) onRequestSubmit?.();
+      else if (target?.closest('[data-action="open-track"]')) onRequestTrack?.();
+    };
     return;
   }
 
@@ -172,13 +215,13 @@ export function renderMadingPanel(
     .map((work) => `
       <article class="mading-card" data-work-id="${escapeHtml(work.id)}" data-nav-card="true">
         <div class="mading-card-top">
-          <span class="status-tag ${work.status === 'Masuk Antologi' ? 'is-antologi' : 'is-lolos'}">${escapeHtml(work.status || 'Lolos Mading')}</span>
+          <span class="status-tag is-lolos">${escapeHtml(work.status || 'Lolos Mading')}</span>
           <span class="mading-category">${escapeHtml(work.category || 'Karya')}</span>
         </div>
         <h3 class="mading-card-title">${escapeHtml(work.title)}</h3>
         <p class="mading-card-author"><strong>${escapeHtml(work.author_name)}</strong><span>${escapeHtml(work.author_role)} &middot; ${escapeHtml(work.author_class_unit || '-')}</span></p>
         ${work.culture_theme ? `<p class="mading-card-theme">Tema: ${escapeHtml(work.culture_theme)}</p>` : ''}
-        <p class="mading-card-summary">${escapeHtml(work.summary || '')}</p>
+        <p class="mading-card-summary">${escapeHtml(extractPlainLiteraryText(work.summary || ''))}</p>
         <div class="mading-card-footer">
           <span class="mading-date">${escapeHtml(formatDateId(work.published_at))}</span>
           <button type="button" class="primary-btn inline-action-btn" data-action="read-mading" data-work-id="${escapeHtml(work.id)}">${createIcon('book')}<span>Baca Karya</span></button>
@@ -225,7 +268,7 @@ function openLibrarianDocModal(doc, contactAdmin) {
         <div class="librarian-guide-notes">
           <h3>Ketentuan Praktis Warga SMAN 1 Sidayu</h3>
           <ul>
-            <li>Naskah dikirim melalui tab <strong>Kirim &amp; Lacak</strong> dalam format <strong>PDF maksimal 3 MB</strong> tanpa perlu login.</li>
+            <li>Naskah dikirim melalui menu <strong>Mading Digital &rarr; Ajukan Karya</strong> dalam format <strong>PDF maksimal 3 MB</strong> tanpa perlu login.</li>
             <li>Karya harus orisinal warga sekolah (Siswa X-XII, Guru, maupun Tendik) dan bebas dari salin-tempel tanpa sumber.</li>
             <li>Setiap naskah mendapat Kode Lacak <code>SPN-XXXXXX</code> untuk memantau hasil kurasi Pustakawan dan Tim NLC.</li>
           </ul>
@@ -258,7 +301,7 @@ export function renderLibrarianPanel(container, { siteSettings = {} } = {}) {
     <div class="librarian-layout">
       <div class="librarian-docs-grid">
         ${docs
-          .map((doc) => `
+      .map((doc) => `
             <article class="librarian-doc-card" data-doc-id="${escapeHtml(doc.id)}" data-nav-card="true">
               <div class="librarian-doc-top">
                 <span class="panel-badge">${escapeHtml(doc.category || 'Panduan')}</span>
@@ -271,7 +314,7 @@ export function renderLibrarianPanel(container, { siteSettings = {} } = {}) {
               </div>
             </article>
           `)
-          .join('')}
+      .join('')}
       </div>
       <aside class="librarian-sidebar">
         <section class="librarian-info-card">

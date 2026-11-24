@@ -1,26 +1,12 @@
 /**
- * Kontrol Navigasi, Layar Landscape & D-Pad TV Android — e-SIPENA SMAN 1 Sidayu
- * Menangani putar layar 90°/270°, fullscreen, PWA install (+ iOS Safari), drawer, serta keyboard/remote.
+ * Kontrol Navigasi, Layar Penuh & D-Pad TV Android — e-SIPENA SMAN 1 Sidayu
+ * Menangani fullscreen, PWA install (+ iOS Safari), drawer, swipe, serta keyboard/remote.
  */
 
-import { APP_CONFIG } from './config.js';
 import { isMuted, playSfx, stopSpeech, toggleMute } from './audio.js';
-import { SafeStorage } from './data-service.js';
 import { closeModal, createIcon, isModalOpen, openModal, showToast, syncModalHeaderFsUi, toggleBrowserFullscreen } from './ui-utils.js';
 
 let deferredInstallPrompt = null;
-
-/**
- * Menerapkan arah rotasi paksa landscape (90° atau 270°) pada body & label HUD.
- * @param {'90' | '270' | string} deg
- */
-export function applyRotation(deg) {
-  const safeDeg = deg === '270' ? '270' : '90';
-  document.body.setAttribute('data-rotate', safeDeg);
-  SafeStorage.setItem(APP_CONFIG.STORAGE_KEYS.rotate, safeDeg);
-  const labelEl = document.getElementById('rotate-label');
-  if (labelEl) labelEl.textContent = `${safeDeg}°`;
-}
 
 /**
  * Menyelaraskan ikon & label tombol suara pada Top HUD.
@@ -99,7 +85,7 @@ function bindInstallButton() {
     if (isIosSafari && !isStandalone) {
       openModal({
         title: 'Pasang di iOS Safari',
-        html: '<div class="librarian-guide-notes"><h3>Tambahkan e-SIPENA ke Layar Utama</h3><ol><li>Ketuk ikon <strong>Bagikan (Share)</strong> pada bilah Safari.</li><li>Pilih <strong>Tambah ke Layar Utama</strong> (<em>Add to Home Screen</em>).</li><li>Ketuk <strong>Tambah</strong> untuk membuka aplikasi layar penuh landscape.</li></ol></div>'
+        html: '<div class="librarian-guide-notes"><h3>Tambahkan e-SIPENA ke Layar Utama</h3><ol><li>Ketuk ikon <strong>Bagikan (Share)</strong> pada bilah Safari.</li><li>Pilih <strong>Tambah ke Layar Utama</strong> (<em>Add to Home Screen</em>).</li><li>Ketuk <strong>Tambah</strong> untuk membuka aplikasi layar penuh.</li></ol></div>'
       });
     }
   });
@@ -110,13 +96,6 @@ function bindInstallButton() {
  * @param {{ onSelectTab: (tabId: string) => void }} options
  */
 export function bindTopHudAndDrawer({ onSelectTab }) {
-  document.getElementById('btn-rotate-screen')?.addEventListener('click', () => {
-    const next = document.body.getAttribute('data-rotate') === '90' ? '270' : '90';
-    applyRotation(next);
-    playSfx('click');
-    showToast(`Orientasi landscape diputar ke ${next} derajat.`);
-  });
-
   const fsBtn = document.getElementById('btn-fullscreen');
   const syncFsLabel = () => {
     const span = fsBtn?.querySelector('span');
@@ -272,20 +251,8 @@ export function bindKeyboardAndModalControls({ onTurnBookPage }) {
   });
 }
 
-function getUiSwipeDelta(startX, startY, endX, endY) {
-  const dx = endX - startX;
-  const dy = endY - startY;
-  const isPortraitRotated =
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(orientation: portrait) and (max-width: 1024px)').matches;
-  if (!isPortraitRotated) return { uiDeltaX: dx, uiDeltaY: dy };
-  const rot = document.body.getAttribute('data-rotate') === '270' ? '270' : '90';
-  return rot === '270' ? { uiDeltaX: -dy, uiDeltaY: dx } : { uiDeltaX: dy, uiDeltaY: -dx };
-}
-
 /**
- * Mengaktifkan gestur geser (swipe) kiri/kanan pada kontainer paginasi,
- * termasuk penyesuaian otomatis sumbu saat HP/Tablet portrait dipaksa rotasi 90°/270°.
+ * Mengaktifkan gestur geser (swipe) kiri/kanan pada kontainer paginasi.
  * @param {HTMLElement | null} el
  * @param {{ onNext: () => void, onPrev: () => void, isEnabled?: () => boolean }} options
  */
@@ -304,9 +271,10 @@ export function bindHorizontalSwipe(el, { onNext, onPrev, isEnabled = () => true
 
   const evaluateSwipe = (startX, startY, endX, endY, elapsed, minDist = 42) => {
     if (elapsed > 850) return false;
-    const { uiDeltaX, uiDeltaY } = getUiSwipeDelta(startX, startY, endX, endY);
-    if (Math.abs(uiDeltaX) >= minDist && Math.abs(uiDeltaX) > Math.abs(uiDeltaY) * 1.15) {
-      if (uiDeltaX < 0) onNext?.();
+    const dx = endX - startX;
+    const dy = endY - startY;
+    if (Math.abs(dx) >= minDist && Math.abs(dx) > Math.abs(dy) * 1.15) {
+      if (dx < 0) onNext?.();
       else onPrev?.();
       return true;
     }
@@ -338,11 +306,12 @@ export function bindHorizontalSwipe(el, { onNext, onPrev, isEnabled = () => true
 
   el.addEventListener('pointermove', (event) => {
     if (!pointerStart || event.pointerId !== pointerStart.id) return;
-    const { uiDeltaX, uiDeltaY } = getUiSwipeDelta(pointerStart.x, pointerStart.y, event.clientX, event.clientY);
-    if (Math.abs(uiDeltaX) > 10 && Math.abs(uiDeltaX) > Math.abs(uiDeltaY)) {
+    const dx = event.clientX - pointerStart.x;
+    const dy = event.clientY - pointerStart.y;
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
       pointerStart.moved = true;
       dragEl.classList.add('is-dragging');
-      dragEl.style.transform = `translateX(${Math.max(-42, Math.min(42, uiDeltaX * 0.35))}px)`;
+      dragEl.style.transform = `translateX(${Math.max(-42, Math.min(42, dx * 0.35))}px)`;
     }
   });
 

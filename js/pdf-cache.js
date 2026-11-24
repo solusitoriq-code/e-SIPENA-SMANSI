@@ -161,3 +161,33 @@ export function isInlinePdfSupported() {
   const ua = String(navigator.userAgent || '');
   return !/Android|iPhone|iPad|iPod|Mobile/i.test(ua);
 }
+
+const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.8.69/build';
+const PDFJS_LIB_URL = `${PDFJS_BASE}/pdf.min.mjs`;
+const PDFJS_WORKER_URL = `${PDFJS_BASE}/pdf.worker.min.mjs`;
+
+let pdfJsPromise = null;
+let cachedWorkerUrl = '';
+
+/**
+ * Memuat modul inti PDF.js dan worker Blob sekali per sesi.
+ */
+export async function ensurePdfJsLoaded() {
+  if (!pdfJsPromise) {
+    pdfJsPromise = (async () => {
+      const pdfjsLib = await import(PDFJS_LIB_URL);
+      if (!cachedWorkerUrl) {
+        const workerRes = await fetch(PDFJS_WORKER_URL);
+        if (!workerRes.ok) throw new Error('Gagal memuat worker PDF.js');
+        const workerBlob = new Blob([await workerRes.arrayBuffer()], { type: 'application/javascript' });
+        cachedWorkerUrl = URL.createObjectURL(workerBlob);
+      }
+      pdfjsLib.GlobalWorkerOptions.workerSrc = cachedWorkerUrl;
+      return pdfjsLib;
+    })().catch((err) => {
+      pdfJsPromise = null;
+      throw err;
+    });
+  }
+  return pdfJsPromise;
+}

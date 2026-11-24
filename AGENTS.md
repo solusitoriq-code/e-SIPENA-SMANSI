@@ -6,18 +6,17 @@ Dokumen ini wajib dibaca di awal setiap sesi chat. Seluruh aturan di bawah mengi
 
 ## 1. Prioritas Perangkat & Aturan Orientasi Layar (Wajib Dipatuhi)
 
-- **Target Perangkat Utama:** **Laptop, PC, dan TV Android** dengan kanvas utama rasio **16:9 widescreen** (`#app-container` dengan `max-width: 177.78vh; max-height: 56.25vw` seperti referensi `Materi Interaktif`).
-- **Paksa Tampilan Landscape pada HP & Tablet:**
-  - Aplikasi **wajib memaksa orientasi landscape** ketika dibuka pada layar sempit/portrait HP dan Tablet menggunakan:
-    1. `manifest.json`: `"orientation": "landscape"`.
-    2. API orientasi saat tombol masuk / fullscreen diklik: `screen.orientation?.lock?.('landscape').catch(() => {})`.
-    3. CSS media query paksa rotasi: `@media screen and (orientation: portrait) and (max-width: 1024px)` memutar `#app-container` sebesar `90deg` (`transform: translate(-50%, -50%) rotate(90deg)`) lengkap dengan ukuran viewport `100dvh x 56.25dvh` / `177.78dvw x 100dvw`.
-    4. Tombol **Putar Layar (`90° / 270°`)** pada Top Utility HUD untuk membalik arah landscape di HP/Tablet.
-- **Ramah Pengguna di Laptop, PC, TV Android & HP Landscape:**
+- **Target Perangkat & Pendekatan Adaptif:**
+  - **Laptop, PC, dan TV Android:** Mempertahankan kanvas utama rasio **16:9 widescreen** (`#app-container` dengan `max-width: 177.78vh; max-height: 56.25vw`) dan pembaca buku default **2 halaman berdampingan (`2 Hal` flipbook)**.
+  - **HP & Tablet (Orientasi Alami Sistem):** Aplikasi **mengikuti orientasi alami perangkat** tanpa memaksa rotasi CSS (`rotate(90deg)`) dan tanpa mengunci `orientation: landscape` pada `manifest.json` (`"orientation": "any"`) maupun `screen.orientation.lock`. Pada layar portrait (`<= 1024px`), HP landscape (`max-height: 500px`), dan tablet sentuh (`<= 1366px`), `#app-container` mengisi penuh `100dvw x 100dvh`.
+- **Aturan Pembaca Buku (`Baca Buku` PDF & Teks):**
+  - **HP Portrait, HP Landscape, dan Tablet Portrait:** Default **1 halaman per tampilan (`1 Hal`)** agar teks novel berproporsi A5 (`148:210`) tampil penuh, tajam, dan nyaman dibaca. Pembaca menyediakan tombol `Pas Lebar` / `Pas Layar`, ketuk tepi kiri/kanan, dan gestur swipe horizontal.
+  - **Tablet Landscape, Laptop, PC, dan TV Android:** Default **2 halaman (`2 Hal` flipbook)** saat area pembaca cukup lebar dalam posisi landscape (`w >= 780 && h >= 440 && w > h`), serta otomatis menyesuaikan saat tablet diputar (kecuali pengguna memilih mode manual).
+- **Ramah Pengguna di Seluruh Perangkat:**
   - **Navigasi TV Android (D-Pad / Remote Control) & Keyboard:** Seluruh kartu buku, tab menu, tombol aksi, modal, dan form wajib mendukung `Tab`, `Enter`, `Space`, `Escape`, dan `ArrowLeft`/`ArrowRight` dengan indikator `:focus-visible` tebal dan kontras tinggi (outline `3px solid` terlihat jelas dari jarak 2–3 meter di layar TV).
-  - **Anti-Scroll Panjang:** Karena seluruh UI berada di dalam kanvas 16:9 (terutama di TV Android & HP landscape yang tingginya ringkas), **dilarang** menumpuk semua bagian dalam 1 halaman panjang. Gunakan pola **Hub / Tab Modul** (Rak 12 Novel, Budaya Gresik, Mading, Pustakawan, Kirim/Lacak, Pengelola, Cetak QR), **paginasi ringkas** (maks. 4 atau 8 buku per tampilan grid 4 kolom), dan **modal terpusat** dengan `overflow-y: auto` internal.
+  - **Tata Letak Ringkas & Terstruktur:** Gunakan pola **Hub / Tab Modul** (Rak 12 Novel, Budaya Gresik, Mading, Pustakawan, Kirim/Lacak, Pengelola, Cetak QR), **paginasi ringkas** (grid 4 kolom di desktop/tablet landscape, 2 kolom di HP/tablet portrait), dan **modal terpusat** dengan `overflow-y: auto` internal.
   - **Keterbacaan & Kenyamanan Sentuh:** Ukuran font UI minimal `14px` (judul dan teks penting lebih besar untuk TV Android), area klik/sentuh minimal `40px x 40px`, dan padding form/modal aman dari terpotong saat keyboard virtual HP muncul.
-  - **Pengecualian Print A4:** Saat mode cetak (`@media print`) diaktifkan dari halaman **Cetak QR A4**, seluruh transformasi rotasi dan batasan 16:9 `#app-container` **wajib di-reset** (`transform: none !important; width: auto; height: auto; overflow: visible`) agar halaman tercetak bersih di kertas A4 portrait.
+  - **Pengecualian Print A4:** Saat mode cetak (`@media print`) diaktifkan dari halaman **Cetak QR A4**, batasan 16:9 dan tinggi `#app-container` **wajib di-reset** (`width: auto; height: auto; overflow: visible`) agar halaman tercetak bersih di kertas A4 portrait.
 
 ---
 

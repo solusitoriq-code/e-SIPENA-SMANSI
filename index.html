@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="css/print.css" media="print">
 </head>
 
-<body data-rotate="90">
+<body>
   <div id="app-container" class="app-stage" role="application"
     aria-label="Portal Literasi Digital e-SIPENA SMA Negeri 1 Sidayu">
     <!-- Top Utility HUD -->
@@ -92,8 +92,8 @@
               <span>Buku 2025</span>
             </div>
             <div class="kpi-chip">
-              <strong id="kpi-culture-topics">5</strong>
-              <span>Budaya Gresik</span>
+              <strong id="kpi-models-3d">3</strong>
+              <span>Pameran 3D</span>
             </div>
           </div>
         </div>
@@ -163,20 +163,20 @@
         <div id="books-swipe-cue" class="swipe-cue-bar" aria-label="Indikator geser halaman rak buku" hidden></div>
       </section>
 
-      <!-- Panel 2: Jejak Budaya Gresik -->
-      <section class="hub-panel" id="panel-budaya" data-panel="budaya" role="tabpanel" aria-labelledby="tab-budaya"
-        hidden>
+      <!-- Panel 2: Pameran 3D Gresik -->
+      <section class="hub-panel" id="panel-pameran3d" data-panel="pameran-3d" role="tabpanel"
+        aria-labelledby="tab-pameran3d" hidden>
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Pemantik Literasi Lokal</p>
-            <h2 class="panel-title">Jejak Budaya Gresik</h2>
+            <p class="eyebrow">Galeri AR &amp; Warisan Lokal</p>
+            <h2 class="panel-title">Pameran 3D Gresik</h2>
           </div>
-          <span class="panel-badge">Video &amp; Tugas Tulis</span>
+          <span class="panel-badge">Objek 3D, AR &amp; Audio</span>
         </div>
-        <div id="culture-container" class="panel-body-scroll">
+        <div id="models3d-container" class="panel-body-scroll">
           <article class="empty-stage-note">
-            <h3>5 Topik Jejak Budaya Gresik</h3>
-            <p>Pemutar video YouTube, ringkasan artikel budaya, dan tombol tulis karya disiapkan di panel ini.</p>
+            <h3>Koleksi Pameran 3D Gresik</h3>
+            <p>Objek budaya 3D interaktif beserta perkenalan audio disiapkan di panel ini.</p>
           </article>
         </div>
       </section>
@@ -189,18 +189,38 @@
             <p class="eyebrow">Publikasi Warga Sekolah</p>
             <h2 class="panel-title">Mading Digital SMAN 1 Sidayu</h2>
           </div>
-          <div class="filter-group" id="mading-role-filters" role="group" aria-label="Saring peran penulis mading">
-            <button class="filter-chip is-active" type="button" data-mading-role="all">Semua</button>
-            <button class="filter-chip" type="button" data-mading-role="Siswa X">Siswa X</button>
-            <button class="filter-chip" type="button" data-mading-role="Siswa XI">Siswa XI</button>
-            <button class="filter-chip" type="button" data-mading-role="Siswa XII">Siswa XII</button>
-            <button class="filter-chip" type="button" data-mading-role="Guru">Guru</button>
-            <button class="filter-chip" type="button" data-mading-role="Tendik">Tendik</button>
+          <div class="mading-header-actions">
+            <div class="filter-group" id="mading-role-filters" role="group" aria-label="Saring peran penulis mading">
+              <button class="filter-chip is-active" type="button" data-mading-role="all">Semua</button>
+              <button class="filter-chip" type="button" data-mading-role="Siswa X">Siswa X</button>
+              <button class="filter-chip" type="button" data-mading-role="Siswa XI">Siswa XI</button>
+              <button class="filter-chip" type="button" data-mading-role="Siswa XII">Siswa XII</button>
+              <button class="filter-chip" type="button" data-mading-role="Guru">Guru</button>
+              <button class="filter-chip" type="button" data-mading-role="Tendik">Tendik</button>
+            </div>
+            <div class="mading-cta-group">
+              <button id="btn-mading-track" class="secondary-btn inline-action-btn" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span>Lacak Karya Saya</span>
+              </button>
+              <button id="btn-mading-submit" class="primary-btn inline-action-btn" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                <span>Ajukan Karya</span>
+              </button>
+            </div>
           </div>
         </div>
         <div id="mading-grid" class="panel-body-scroll">
           <article class="empty-stage-note">
-            <h3>8 Karya Mading Awal</h3>
+            <h3>Mading Digital Warga Sekolah</h3>
             <p>Daftar karya lolos kurasi dari Siswa X-XII, Guru, dan Tendik tampil terpaginasi di panel ini.</p>
           </article>
         </div>
@@ -225,13 +245,23 @@
       </section>
 
       <!-- Panel 5: Kirim Karya & Lacak Status -->
-      <section class="hub-panel" id="panel-kirim" data-panel="kirim" role="tabpanel" aria-labelledby="tab-kirim" hidden>
+      <section class="hub-panel" id="panel-kirim" data-panel="kirim" role="tabpanel" aria-labelledby="kirim-panel-title"
+        hidden>
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Partisipasi Tanpa Login</p>
-            <h2 class="panel-title">Kirim Karya PDF &amp; Lacak Kode</h2>
+            <p class="eyebrow">Partisipasi</p>
+            <h2 id="kirim-panel-title" class="panel-title">Kirim Karya PDF &amp; Lacak Kode</h2>
           </div>
-          <span class="panel-badge">Format PDF Maks. 3 MB</span>
+          <div class="panel-header-actions">
+            <span class="panel-badge">Format PDF Maks. 3 MB</span>
+            <button id="btn-kirim-back-mading" class="secondary-btn inline-action-btn" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              <span>Kembali ke Mading</span>
+            </button>
+          </div>
         </div>
         <div id="submission-container" class="panel-body-scroll">
           <article class="empty-stage-note">
@@ -301,12 +331,11 @@
         <span class="drawer-group-label">Portal Pembaca</span>
         <button class="drawer-item is-active" type="button" data-drawer-tab="rak" id="tab-rak"
           aria-current="page">Etalase Novel 2026</button>
-        <button class="drawer-item" type="button" data-drawer-tab="budaya" id="tab-budaya">Jejak Budaya Gresik</button>
+        <button class="drawer-item" type="button" data-drawer-tab="pameran-3d" id="tab-pameran3d">Pameran 3D
+          Gresik</button>
         <button class="drawer-item" type="button" data-drawer-tab="mading" id="tab-mading">Mading Digital</button>
         <button class="drawer-item" type="button" data-drawer-tab="pustakawan" id="tab-pustakawan">Sudut
           Pustakawan</button>
-        <button class="drawer-item" type="button" data-drawer-tab="kirim" id="tab-kirim">Kirim &amp; Lacak
-          Karya</button>
         <span class="drawer-group-label">Utilitas &amp; Kurator</span>
         <button class="drawer-item drawer-item-utility" type="button" data-drawer-tab="kelola" id="tab-kelola">Ruang
           Pengelola</button>
@@ -314,15 +343,6 @@
           hidden>Cetak QR A4</button>
         <span class="drawer-group-label">Tampilan Layar</span>
         <div class="drawer-utility-actions">
-          <button id="btn-rotate-screen" class="drawer-util-btn" type="button"
-            aria-label="Putar arah layar 90 atau 270 derajat">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="23 4 23 10 17 10"></polyline>
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-            </svg>
-            <span>Putar <strong id="rotate-label">90°</strong></span>
-          </button>
           <button id="btn-fullscreen" class="drawer-util-btn" type="button" aria-label="Aktifkan layar penuh">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -345,7 +365,8 @@
       <div id="app-modal" class="app-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1">
         <div class="modal-header">
           <h2 id="modal-title" class="modal-title">Detail Informasi</h2>
-          <div id="modal-header-tabs" class="modal-header-tabs" role="tablist" aria-label="Tampilan detail atau baca buku" hidden></div>
+          <div id="modal-header-tabs" class="modal-header-tabs" role="tablist"
+            aria-label="Tampilan detail atau baca buku" hidden></div>
           <div class="modal-header-actions">
             <button id="modal-toggle-size" class="modal-hdr-btn" type="button" hidden
               aria-label="Perkecil jendela modal">

@@ -20,7 +20,6 @@ export function getStatusBadgeClass(status) {
     'Menunggu Kurasi': 'status-badge status-wait',
     'Perlu Revisi': 'status-badge status-revise',
     'Lolos Mading': 'status-badge status-approved',
-    'Masuk Antologi': 'status-badge status-anthology',
     Ditolak: 'status-badge status-rejected'
   };
   return map[status] || 'status-badge status-wait';
@@ -31,7 +30,6 @@ function getStatusGuidance(status) {
     'Menunggu Kurasi': 'Naskah sudah tercatat dan menunggu peninjauan Tim Pustakawan / Pembina NLC.',
     'Perlu Revisi': 'Periksa catatan pembimbing di bawah dan kirim ulang perbaikan naskah jika diperlukan.',
     'Lolos Mading': 'Selamat, karya Anda telah diterbitkan di tab Mading Digital.',
-    'Masuk Antologi': 'Selamat, karya terpilih masuk daftar kurasi antologi sekolah.',
     Ditolak: 'Naskah belum memenuhi kriteria kurasi saat ini. Silakan baca catatan pembimbing.'
   };
   return map[status] || '';
@@ -62,10 +60,12 @@ export function renderRecentCodeChips(container) {
   const wrap = container.querySelector('#track-recent-chips');
   if (!wrap) return;
   const history = getTrackingHistory();
-  const demoOption = { code: 'SPN-DEMO01', title: 'Contoh Mading' };
-  const merged = history.some((h) => h.code === demoOption.code) ? history : [...history, demoOption];
+  if (!history.length) {
+    wrap.innerHTML = '<span class="track-empty-hint">Belum ada kode tersimpan.</span>';
+    return;
+  }
 
-  wrap.innerHTML = merged
+  wrap.innerHTML = history
     .slice(0, 5)
     .map(
       (item) =>

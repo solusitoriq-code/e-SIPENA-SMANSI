@@ -11,6 +11,8 @@ let audioCtx = null;
 let mutedState = SafeStorage.getItem(AUDIO_MUTE_KEY) === '1';
 let activeUtterance = null;
 let speakingFlag = false;
+let activeAudioEl = null;
+let activeAudioToken = 0;
 
 function getAudioContext() {
   if (mutedState || typeof window === 'undefined') return null;
@@ -129,9 +131,105 @@ export function isSpeaking() {
 }
 
 /**
- * Menghentikan pembacaan suara sinopsis yang sedang berjalan.
+ * Memeriksa apakah trek audio narasi lokal sedang diputar.
+ * @returns {boolean}
+ */
+export function isAudioTrackPlaying() {
+  return Boolean(activeAudioEl && !activeAudioEl.paused && !activeAudioEl.ended);
+}
+
+/**
+ * Menghentikan trek audio narasi lokal yang sedang diputar.
+ */
+export function stopAudioTrack() {
+  activeAudioToken += 1;
+  const el = activeAudioEl;
+  activeAudioEl = null;
+  if (!el) return;
+  try {
+    el.pause();
+    el.currentTime = 0;
+    el.removeAttribute('src');
+    el.load();
+  } catch {
+    // Abaikan galat penghentian audio
+  }
+}
+
+/**
+ * Memutar berkas audio narasi lokal (mis. assets/audios/*.mpeg).
+ * @param {string} src
+ * @param {{ onStart?: () => void, onEnd?: () => void, onError?: (err?: unknown) => void, onTimeUpdate?: (currentSec: number, durationSec: number) => void }} [callbacks]
+ * @returns {boolean}
+ */
+export function playAudioTrack(src, callbacks = {}) {
+  const cleanSrc = String(src || '').trim();
+  if (!cleanSrc || typeof Audio === 'undefined') {
+    callbacks.onError?.(new Error('Berkas audio tidak tersedia.'));
+    return false;
+  }
+
+  if (mutedState) {
+    setMuted(false);
+  }
+
+  stopSpeech();
+
+  const token = ++activeAudioToken;
+  const audio = new Audio(cleanSrc);
+  audio.preload = 'auto';
+  activeAudioEl = audio;
+
+  const isStale = () => token !== activeAudioToken || activeAudioEl !== audio;
+
+  audio.addEventListener('playing', () => {
+    if (!isStale()) callbacks.onStart?.();
+  });
+  audio.addEventListener('timeupdate', () => {
+    if (!isStale()) {
+      callbacks.onTimeUpdate?.(Number(audio.currentTime || 0), Number(audio.duration || 0));
+    }
+  });
+  audio.addEventListener('loadedmetadata', () => {
+    if (!isStale()) {
+      callbacks.onTimeUpdate?.(Number(audio.currentTime || 0), Number(audio.duration || 0));
+    }
+  });
+  audio.addEventListener('ended', () => {
+    if (isStale()) return;
+    activeAudioEl = null;
+    callbacks.onEnd?.();
+  });
+  audio.addEventListener('error', (err) => {
+    if (isStale()) return;
+    activeAudioEl = null;
+    callbacks.onError?.(err);
+  });
+
+  try {
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.then === 'function') {
+      playPromise.catch((err) => {
+        if (isStale()) return;
+        activeAudioEl = null;
+        callbacks.onError?.(err);
+      });
+    }
+    return true;
+  } catch (err) {
+    if (!isStale()) {
+      activeAudioEl = null;
+      callbacks.onError?.(err);
+    }
+    return false;
+  }
+}
+
+/**
+ * Menghentikan pembacaan suara sinopsis dan audio narasi yang sedang berjalan.
  */
 export function stopSpeech() {
+  stopAudioTrack();
   speakingFlag = false;
   activeUtterance = null;
   if (isSpeechSupported()) {

@@ -10,7 +10,7 @@ Pastikan seluruh komponen berikut sudah siap sebelum mengunggah proyek ke Cloudf
 
 1. **Akun Cloudflare:** Daftar atau masuk ke [dash.cloudflare.com](https://dash.cloudflare.com).
 2. **Backend Supabase sudah aktif:**
-   - [supabase/schema.sql](supabase/schema.sql) dan [supabase/seed.sql](supabase/seed.sql) sudah dijalankan di **SQL Editor** Supabase (sertakan [supabase/migration_drop_books_excerpt.sql](supabase/migration_drop_books_excerpt.sql) jika proyek berasal dari skema lama).
+   - [supabase/schema.sql](supabase/schema.sql) dan [supabase/seed.sql](supabase/seed.sql) sudah dijalankan di **SQL Editor** Supabase (sertakan [supabase/migration_drop_books_excerpt.sql](supabase/migration_drop_books_excerpt.sql) dan [supabase/migration_reset_submissions_remove_antologi.sql](supabase/migration_reset_submissions_remove_antologi.sql) jika proyek berasal dari skema/seed lama).
    - Minimal 1 akun kurator sudah dibuat pada menu **Authentication > Users** di Supabase.
 3. **Google Apps Script sudah di-deploy:**
    - [google-apps-script/UploadDrive.gs](google-apps-script/UploadDrive.gs) sudah terpasang dengan `TARGET_FOLDER_ID` dan di-deploy sebagai **Web app** (`Execute as: Me`, `Who has access: Anyone`). Lihat [google-apps-script/README.md](google-apps-script/README.md).

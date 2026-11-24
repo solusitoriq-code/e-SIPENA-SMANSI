@@ -6,6 +6,8 @@
 import { APP_CONFIG } from './config.js';
 
 const DEMO_OVERRIDES_KEY = 'esipena_demo_catalog_overrides';
+const CURATION_RESET_EPOCH_KEY = 'esipena_curation_reset_epoch';
+const CURATION_RESET_EPOCH_VAL = '2026-11-24-reset1';
 const memoryStorage = new Map();
 
 export const SafeStorage = {
@@ -141,9 +143,9 @@ export function getDemoOverrides() {
     books: stored?.books && typeof stored.books === 'object' ? stored.books : {},
     createdBooks: Array.isArray(stored?.createdBooks) ? stored.createdBooks : [],
     deletedBooks: Array.isArray(stored?.deletedBooks) ? stored.deletedBooks : [],
-    culturePrompts: stored?.culturePrompts && typeof stored.culturePrompts === 'object' ? stored.culturePrompts : {},
-    createdCulture: Array.isArray(stored?.createdCulture) ? stored.createdCulture : [],
-    deletedCulture: Array.isArray(stored?.deletedCulture) ? stored.deletedCulture : [],
+    models3d: stored?.models3d && typeof stored.models3d === 'object' ? stored.models3d : {},
+    createdModels3d: Array.isArray(stored?.createdModels3d) ? stored.createdModels3d : [],
+    deletedModels3d: Array.isArray(stored?.deletedModels3d) ? stored.deletedModels3d : [],
     siteSettings: stored?.siteSettings && typeof stored.siteSettings === 'object' ? stored.siteSettings : {},
     submissions: stored?.submissions && typeof stored.submissions === 'object' ? stored.submissions : {}
   };
@@ -163,10 +165,10 @@ export function saveDemoOverride(bucket, itemId, patch) {
       return setDemoOverrides(current);
     }
   }
-  if (bucket === 'culturePrompts') {
-    const idx = current.createdCulture.findIndex((c) => c.id === itemId);
+  if (bucket === 'models3d') {
+    const idx = current.createdModels3d.findIndex((m) => m.id === itemId);
     if (idx >= 0) {
-      current.createdCulture[idx] = { ...current.createdCulture[idx], ...patch };
+      current.createdModels3d[idx] = { ...current.createdModels3d[idx], ...patch };
       return setDemoOverrides(current);
     }
   }
@@ -178,26 +180,59 @@ export function saveDemoOverride(bucket, itemId, patch) {
   return setDemoOverrides(current);
 }
 
+export function mergeSubmissionRows(rows = [], overrides = {}) {
+  const map = new Map();
+  for (const raw of rows) {
+    if (!raw || (!raw.id && !raw.tracking_code)) continue;
+    const code = String(raw.tracking_code || '').trim().toUpperCase();
+    const key = code || String(raw.id);
+    const ovById = raw.id && overrides[raw.id] ? overrides[raw.id] : null;
+    const ovByCode = code && overrides[code] ? overrides[code] : null;
+    const item = { ...raw, ...(ovById || {}), ...(ovByCode || {}) };
+    const prev = map.get(key);
+    if (!prev) {
+      map.set(key, item);
+      continue;
+    }
+    const prevLocal = String(prev.id || '').startsWith('local-');
+    const nextLocal = String(item.id || '').startsWith('local-');
+    const prevTs = Date.parse(prev.updated_at || prev.published_at || prev.created_at || 0) || 0;
+    const nextTs = Date.parse(item.updated_at || item.published_at || item.created_at || 0) || 0;
+    const useNextBase = (prevLocal && !nextLocal) || (prevLocal === nextLocal && nextTs >= prevTs);
+    const base = useNextBase ? item : prev;
+    const newer = nextTs > prevTs ? item : prev;
+    map.set(key, {
+      ...base,
+      status: newer.status ?? base.status,
+      reviewer_notes: newer.reviewer_notes ?? base.reviewer_notes,
+      published_at: newer.published_at ?? base.published_at,
+      updated_at: newer.updated_at ?? base.updated_at
+    });
+  }
+  return [...map.values()];
+}
+
 export function applyDemoOverridesToDataset({
   books = [],
-  culturePrompts = [],
+  models3d = [],
   madingWorks = [],
+  localSubmissions = [],
   siteSettings = {},
   includeHidden = false
 }) {
   const ov = getDemoOverrides();
   const deletedBookSet = new Set(ov.deletedBooks);
-  const deletedCultureSet = new Set(ov.deletedCulture);
+  const deletedModelsSet = new Set(ov.deletedModels3d);
 
   const allBooks = [...books, ...ov.createdBooks]
     .filter((b) => b && !deletedBookSet.has(b.id))
     .map((b) => (ov.books[b.id] ? { ...b, ...ov.books[b.id] } : b))
     .filter((b) => includeHidden || b.is_published !== false);
 
-  const allCulture = [...culturePrompts, ...ov.createdCulture]
-    .filter((c) => c && !deletedCultureSet.has(c.id))
-    .map((c) => (ov.culturePrompts[c.id] ? { ...c, ...ov.culturePrompts[c.id] } : c))
-    .filter((c) => includeHidden || c.is_active !== false);
+  const allModels3d = [...models3d, ...ov.createdModels3d]
+    .filter((m) => m && !deletedModelsSet.has(m.id))
+    .map((m) => (ov.models3d[m.id] ? { ...m, ...ov.models3d[m.id] } : m))
+    .filter((m) => includeHidden || m.is_active !== false);
 
   const mergedSettings = structuredClone(siteSettings || {});
   for (const [key, val] of Object.entries(ov.siteSettings)) {
@@ -205,13 +240,29 @@ export function applyDemoOverridesToDataset({
       mergedSettings[key] = { ...(mergedSettings[key] || {}), ...val };
     }
   }
-  const mergedMading = madingWorks.map((w) =>
-    ov.submissions[w.id] ? { ...w, ...ov.submissions[w.id] } : w
-  );
+  const mergedMading = mergeSubmissionRows([...madingWorks, ...localSubmissions], ov.submissions)
+    .filter((w) => w.status === 'Lolos Mading');
   return {
     books: allBooks,
-    culturePrompts: allCulture,
+    models3d: allModels3d,
     madingWorks: mergedMading,
     siteSettings: mergedSettings
   };
+}
+
+export function ensureCurationResetEpoch(cachedSnapshotKey, localSubmissionsKey) {
+  if (SafeStorage.getItem(CURATION_RESET_EPOCH_KEY) === CURATION_RESET_EPOCH_VAL) return;
+  if (localSubmissionsKey) SafeStorage.removeItem(localSubmissionsKey);
+  SafeStorage.removeItem(APP_CONFIG.STORAGE_KEYS.trackingHistory);
+  const ov = SafeStorage.getJson(DEMO_OVERRIDES_KEY, null);
+  if (ov && typeof ov === 'object' && ov.submissions) {
+    SafeStorage.setJson(DEMO_OVERRIDES_KEY, { ...ov, submissions: {} });
+  }
+  if (cachedSnapshotKey) {
+    const snap = SafeStorage.getJson(cachedSnapshotKey, null);
+    if (snap && typeof snap === 'object' && Array.isArray(snap.madingWorks)) {
+      SafeStorage.setJson(cachedSnapshotKey, { ...snap, madingWorks: [] });
+    }
+  }
+  SafeStorage.setItem(CURATION_RESET_EPOCH_KEY, CURATION_RESET_EPOCH_VAL);
 }

@@ -1,6 +1,6 @@
 /**
  * Layanan Kurasi Naskah & Manajemen Katalog — e-SIPENA SMAN 1 Sidayu
- * Menangani CRUD penuh (tambah, sunting, hapus) untuk books, culture_prompts,
+ * Menangani CRUD penuh (tambah, sunting, hapus) untuk books, models_3d,
  * submissions, serta site_settings melalui Supabase REST atau mode demo lokal.
  */
 
@@ -8,12 +8,13 @@ import { isSupabaseConfigured } from './config.js';
 import { adminGetSession, adminSignIn, adminSignOut, authSupabaseFetch } from './admin-auth.js';
 import {
   getDemoOverrides,
+  mergeSubmissionRows,
   normalizeGDriveInput,
   saveDemoOverride,
   setDemoOverrides,
   slugifyTitle
 } from './service-helpers.js';
-import { getLocalSubmissions, saveLocalSubmission } from './submission-service.js';
+import { getLocalSubmissions, removeLocalSubmissionByCode, saveLocalSubmission } from './submission-service.js';
 
 export { adminGetSession, adminSignIn, adminSignOut };
 export const BOOK_ROLES = Object.freeze(['Siswa XI', 'Siswa XII', 'Guru', 'Tendik', 'Kepala Sekolah']);
@@ -31,17 +32,15 @@ export async function adminListWorks({
   let source = 'demo';
 
   if (session.mode === 'supabase' && isSupabaseConfigured()) {
-    items = (await authSupabaseFetch('/rest/v1/submissions?select=*&order=created_at.desc')) || [];
+    const rawItems = (await authSupabaseFetch('/rest/v1/submissions?select=*&order=created_at.desc')) || [];
+    items = mergeSubmissionRows(rawItems).sort(
+      (a, b) => new Date(b.created_at || b.published_at || 0) - new Date(a.created_at || a.published_at || 0)
+    );
     source = 'supabase';
   } else {
     const ov = getDemoOverrides().submissions;
     const localSubs = getLocalSubmissions();
-    const map = new Map();
-    for (const row of [...localSubs, ...fallbackWorks]) {
-      if (!row?.id) continue;
-      map.set(row.id, ov[row.id] ? { ...row, ...ov[row.id] } : row);
-    }
-    items = [...map.values()].sort(
+    items = mergeSubmissionRows([...localSubs, ...fallbackWorks], ov).sort(
       (a, b) => new Date(b.created_at || b.published_at || 0) - new Date(a.created_at || a.published_at || 0)
     );
   }
@@ -72,7 +71,7 @@ export async function adminUpdateWork(workId, updates = {}) {
   for (const key of allowed) {
     if (updates[key] !== undefined) payload[key] = updates[key];
   }
-  if (['Lolos Mading', 'Masuk Antologi'].includes(payload.status) && !payload.published_at) {
+  if (payload.status === 'Lolos Mading' && !payload.published_at) {
     payload.published_at = new Date().toISOString();
   }
   payload.updated_at = new Date().toISOString();
@@ -83,13 +82,19 @@ export async function adminUpdateWork(workId, updates = {}) {
       headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(payload)
     });
-    return Array.isArray(rows) ? rows[0] || payload : payload;
+    const updated = Array.isArray(rows) ? rows[0] || payload : payload;
+    removeLocalSubmissionByCode(updated?.tracking_code || updates.tracking_code);
+    return updated;
   }
 
+  const cleanCode = String(updates.tracking_code || '').trim().toUpperCase();
   const localSubs = getLocalSubmissions();
-  const match = localSubs.find((s) => s.id === workId);
+  const match = localSubs.find(
+    (s) => s.id === workId || (cleanCode && String(s.tracking_code || '').trim().toUpperCase() === cleanCode)
+  );
   if (match) saveLocalSubmission({ ...match, ...payload });
   saveDemoOverride('submissions', workId, payload);
+  if (cleanCode) saveDemoOverride('submissions', cleanCode, payload);
   return { id: workId, ...payload };
 }
 
@@ -206,49 +211,49 @@ export async function adminDeleteBook(bookId) {
   return { deleted: true, id: bookId };
 }
 
-export async function adminListAllCulturePrompts(fallbackTopics = []) {
+export async function adminListAllModels3d(fallbackModels = []) {
   const session = adminGetSession();
   if (!session) throw new Error('Sesi kurator belum aktif.');
 
   if (session.mode === 'supabase' && isSupabaseConfigured()) {
-    return (await authSupabaseFetch('/rest/v1/culture_prompts?select=*&order=sort_order.asc')) || [];
+    return (await authSupabaseFetch('/rest/v1/models_3d?select=*&order=sort_order.asc')) || [];
   }
   const ov = getDemoOverrides();
-  const deleted = new Set(ov.deletedCulture);
-  return [...fallbackTopics, ...ov.createdCulture]
-    .filter((c) => c && !deleted.has(c.id))
-    .map((c) => (ov.culturePrompts[c.id] ? { ...c, ...ov.culturePrompts[c.id] } : c))
+  const deleted = new Set(ov.deletedModels3d);
+  return [...fallbackModels, ...ov.createdModels3d]
+    .filter((m) => m && !deleted.has(m.id))
+    .map((m) => (ov.models3d[m.id] ? { ...m, ...ov.models3d[m.id] } : m))
     .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 }
 
-export async function adminCreateCulturePrompt(input = {}) {
+export async function adminCreateModel3d(input = {}) {
   const session = adminGetSession();
   if (!session) throw new Error('Sesi kurator belum aktif.');
 
   const title = String(input.title || '').trim();
-  const articleSummary = String(input.article_summary || '').trim();
-  const writingPrompt = String(input.writing_prompt || '').trim();
-  if (!title || !articleSummary || !writingPrompt) {
-    throw new Error('Judul, ringkasan artikel, dan tugas menulis wajib diisi.');
+  const introduction = String(input.introduction || '').trim();
+  const modelPath = String(input.model_path || '').trim();
+  if (!title || !introduction) {
+    throw new Error('Judul model dan teks perkenalan wajib diisi.');
+  }
+  if (!modelPath) {
+    throw new Error('Sumber berkas model 3D di aplikasi wajib dipilih.');
   }
 
-  const yt = String(input.youtube_id || '').trim();
   const record = {
     slug: String(input.slug || '').trim() || slugifyTitle(title),
     title,
-    subtitle: String(input.subtitle || '').trim(),
-    youtube_id: yt,
-    article_summary: articleSummary,
-    writing_prompt: writingPrompt,
-    location_tag: String(input.location_tag || 'Gresik').trim() || 'Gresik',
-    duration_label: String(input.duration_label || '04:00').trim() || '04:00',
+    introduction,
+    category: String(input.category || 'Budaya Gresik').trim() || 'Budaya Gresik',
+    model_path: modelPath,
+    placeholder_url: String(input.placeholder_url || '').trim() || 'assets/images/logo-smansi.webp',
+    audio_path: String(input.audio_path || '').trim(),
     sort_order: Number(input.sort_order || 99) || 99,
-    is_active: input.is_active !== false,
-    is_placeholder: yt ? false : Boolean(input.is_placeholder)
+    is_active: input.is_active !== false
   };
 
   if (session.mode === 'supabase' && isSupabaseConfigured()) {
-    const rows = await authSupabaseFetch('/rest/v1/culture_prompts', {
+    const rows = await authSupabaseFetch('/rest/v1/models_3d', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(record)
@@ -256,30 +261,29 @@ export async function adminCreateCulturePrompt(input = {}) {
     return Array.isArray(rows) ? rows[0] || record : record;
   }
 
-  const demoTopic = { id: `demo-cul-${Date.now().toString(36)}`, ...record };
+  const demoModel = { id: `demo-m3d-${Date.now().toString(36)}`, ...record };
   const ov = getDemoOverrides();
-  ov.createdCulture.push(demoTopic);
+  ov.createdModels3d.push(demoModel);
   setDemoOverrides(ov);
-  return demoTopic;
+  return demoModel;
 }
 
-export async function adminSaveCulturePrompt(promptId, updates = {}) {
+export async function adminSaveModel3d(modelId, updates = {}) {
   const session = adminGetSession();
   if (!session) throw new Error('Sesi kurator belum aktif.');
 
   const payload = {};
-  const fields = [
-    'title', 'subtitle', 'youtube_id', 'article_summary', 'writing_prompt',
-    'location_tag', 'duration_label', 'sort_order', 'is_active', 'is_placeholder'
-  ];
+  const fields = ['title', 'introduction', 'category', 'model_path', 'placeholder_url', 'audio_path', 'sort_order', 'is_active'];
   for (const field of fields) {
     if (updates[field] !== undefined) {
       payload[field] = typeof updates[field] === 'string' ? updates[field].trim() : updates[field];
     }
   }
+  if (payload.title !== undefined && !payload.title) throw new Error('Judul model wajib diisi.');
+  if (payload.introduction !== undefined && !payload.introduction) throw new Error('Teks perkenalan wajib diisi.');
 
   if (session.mode === 'supabase' && isSupabaseConfigured()) {
-    const rows = await authSupabaseFetch(`/rest/v1/culture_prompts?id=eq.${encodeURIComponent(promptId)}`, {
+    const rows = await authSupabaseFetch(`/rest/v1/models_3d?id=eq.${encodeURIComponent(modelId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(payload)
@@ -287,24 +291,24 @@ export async function adminSaveCulturePrompt(promptId, updates = {}) {
     return Array.isArray(rows) ? rows[0] || payload : payload;
   }
 
-  saveDemoOverride('culturePrompts', promptId, payload);
-  return { id: promptId, ...payload };
+  saveDemoOverride('models3d', modelId, payload);
+  return { id: modelId, ...payload };
 }
 
-export async function adminDeleteCulturePrompt(promptId) {
+export async function adminDeleteModel3d(modelId) {
   const session = adminGetSession();
   if (!session) throw new Error('Sesi kurator belum aktif.');
 
   if (session.mode === 'supabase' && isSupabaseConfigured()) {
-    await authSupabaseFetch(`/rest/v1/culture_prompts?id=eq.${encodeURIComponent(promptId)}`, { method: 'DELETE' });
-    return { deleted: true, id: promptId };
+    await authSupabaseFetch(`/rest/v1/models_3d?id=eq.${encodeURIComponent(modelId)}`, { method: 'DELETE' });
+    return { deleted: true, id: modelId };
   }
 
   const ov = getDemoOverrides();
-  ov.createdCulture = ov.createdCulture.filter((c) => c.id !== promptId);
-  if (!ov.deletedCulture.includes(promptId)) ov.deletedCulture.push(promptId);
+  ov.createdModels3d = ov.createdModels3d.filter((m) => m.id !== modelId);
+  if (!ov.deletedModels3d.includes(modelId)) ov.deletedModels3d.push(modelId);
   setDemoOverrides(ov);
-  return { deleted: true, id: promptId };
+  return { deleted: true, id: modelId };
 }
 
 export async function adminSaveSetting(key, value, meta = {}) {

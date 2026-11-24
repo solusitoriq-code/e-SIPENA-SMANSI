@@ -8,18 +8,21 @@ File ini adalah memori bersama lintas sesi chat. Setiap selesai satu sesi, AI wa
 
 - **Aplikasi:** Portal Literasi Digital **"e-SIPENA" SMAN 1 Sidayu** (Perpustakaan Lentera Ilmu & NLC)
 - **Katalog Buku Aktif:** **12 Novel Tahun 2026** dari `DAFTAR NAMA PENULIS NOVEL TAHUN 2026.docx` & `00. NASKAH FIX CETAK/` (11 Siswa XI–XII + 1 Guru SAGUSABU *Mas'Idah*). Rekam jejak 23 Buku 2025 tampil pada KPI capaian program saja.
-- **Data Pendukung:** Menggunakan **data placeholder terstruktur** (`is_placeholder: true`) untuk 5 video YouTube Jejak Budaya Gresik, 8 contoh karya awal Mading (Siswa X–XII, Guru, Tendik), WA admin, dan dokumen Sudut Pustakawan agar langsung berjalan dan dapat diedit lewat Ruang Pengelola / Supabase.
+- **Data Pendukung:** Menggunakan **data placeholder terstruktur** (`is_placeholder: true`) untuk 8 contoh karya awal Mading (Siswa X–XII, Guru, Tendik), WA admin, dokumen Sudut Pustakawan, serta **3 koleksi Pameran 3D Gresik (`models_3d`)** beraset lokal (`assets/3d_models/*.glb` + `assets/placeholders/*`) yang dapat diedit lewat Ruang Pengelola / Supabase.
 - **Prioritas Layar & Orientasi (`AGENTS.md`):**
-  - Kanvas utama **16:9 Landscape** optimal untuk **Laptop, PC, dan TV Android** (navigasi drawer kiri + panel modul, paginasi ringkas maks. 4–8 kartu/halaman + swipe/panah samping rak + titik halaman, indikator `:focus-visible` & kontrol keyboard/remote D-Pad penuh).
-  - **HP & Tablet dipaksa ke tampilan Landscape** (CSS `@media (orientation: portrait) and (max-width: 1024px)` rotate `90deg` + tombol Putar Layar `90° / 270°` & Layar Penuh di dalam drawer menu kiri + layout `2x2` horizontal khusus ponsel + `manifest.json` `"orientation": "landscape"`), dengan reset transform saat `@media print` A4.
+  - Kanvas **16:9 Landscape** dipertahankan untuk **Laptop, PC, dan TV Android** (navigasi drawer kiri + panel modul, paginasi ringkas maks. 4–8 kartu/halaman + swipe/panah samping rak + titik halaman, indikator `:focus-visible` & kontrol keyboard/remote D-Pad penuh).
+  - **HP & Tablet memakai orientasi adaptif alami perangkat** (tanpa paksa rotasi CSS `90deg`/`270deg`, `manifest.json` `"orientation": "any"`, tanpa `screen.orientation.lock`):
+    - **HP Portrait (`<= 599px`) & Tablet Portrait (`600–1024px`):** kanvas penuh `100dvw x 100dvh`, grid 2 kolom vertikal, form 1 kolom ramah keyboard virtual, dan pembaca PDF default **1 halaman (`1 Hal`)** dilengkapi tombol `Pas Lebar` / `Pas Layar` serta ketuk tepi kiri/kanan.
+    - **HP Landscape (`max-height: 500px`):** kartu `2x2` horizontal ringkas dan pembaca PDF default **1 halaman (`1 Hal`)**.
+    - **Tablet Landscape (`w >= 780 && h >= 440 && w > h`), Laptop, PC & TV Android:** pembaca PDF otomatis beralih ke **2 halaman (`2 Hal` flipbook)** saat diputar ke landscape (kecuali dikunci manual) serta reset transformasi pada `@media print` A4.
 - **Stack Terkunci:**
   - **Frontend:** Vanilla HTML5, CSS3, ES6 Modules (`type="module"`), `PDF.js` (`pdfjs-dist@4.8.69` via CDN + IndexedDB cache), `@zxing/browser` (on-demand scan ISBN/QR), Web Audio API, Web Speech API, PWA (`manifest.json`, `sw.js`).
   - **Hosting:** **Cloudflare Pages** (`_headers`, `_redirects`, `.cfignore`, Cloudflare Pages Function `functions/api/pdf.js`, batas maks. 25 MiB/file).
   - **Database & Auth:** **Supabase Free Tier** (PostgreSQL REST/RPC via `fetch()`, RLS, Supabase Auth kurator). Storage Supabase untuk PDF = **0 MB**.
   - **PDF & Cover Storage:** **Google Drive** (1 folder induk `TARGET_FOLDER_ID` otomatis memilah `covers/` <= 1 MB WebP, `naskah-pdf/` <= 3 MB, dan `novel-pdf/` <= 16 MB melalui `google-apps-script/UploadDrive.gs`).
-- **Skema Supabase (`supabase/schema.sql` + `supabase/migration_drop_books_excerpt.sql`):**
-  - Tabel: `books` (kolom `excerpt` sudah dihapus), `submissions`, `culture_prompts`, `site_settings`
-  - View publik: `public_mading_works` (hanya `Lolos Mading` / `Masuk Antologi`, tanpa kolom `contact_wa`)
+- **Skema Supabase (`supabase/schema.sql` + `supabase/migration_drop_books_excerpt.sql` + `supabase/migration_reset_submissions_remove_antologi.sql` + `supabase/migration_models_3d.sql`):**
+  - Tabel: `books` (kolom `excerpt` sudah dihapus), `submissions`, `models_3d`, `site_settings`
+  - View publik: `public_mading_works` (hanya `Lolos Mading`, tanpa kolom `contact_wa`)
   - RPC: `track_submission(p_tracking_code)`, `increment_book_like(p_book_id)`
 
 ---
@@ -64,5 +67,5 @@ File ini adalah memori bersama lintas sesi chat. Setiap selesai satu sesi, AI wa
 ---
 
 ## Status Terakhir
-- **Status proyek:** **Selesai (Sesi 1–4)** dan **siap deploy ke Cloudflare Pages** (fitur **Lembar Cetak QR A4** / `js/qr-print.js` ditunda dan `#tab-cetak-qr` tetap disembunyikan).
-- **Catatan terakhir:** Seluruh `29` modul `js/*.js` aktif lolos `node --check` dan `< 400` baris, `sw.js` diperbarui ke `esipena-shell-v4` dengan seluruh `29` modul aktif, `.cfignore` menambahkan `00. NASKAH GABUNGAN/` (0 file deploy `>= 25 MiB`), `_headers` mengaktifkan `camera=(self)` untuk pemindai ISBN/QRCBN, panduan iOS Safari + kontrol D-Pad & target sentuh `>= 40px` diperbaiki, dan `README.md` telah diperbarui akurat.
+- **Status proyek:** **Selesai (Sesi 1–4 + Pembaruan UI/UX Adaptif HP & Tablet + Reset Kurasi + Pameran 3D Gresik AR)** dan **siap deploy ke Cloudflare Pages** (fitur **Lembar Cetak QR A4** / `js/qr-print.js` ditunda dan `#tab-cetak-qr` tetap disembunyikan).
+- **Catatan terakhir:** Mengganti menu **Jejak Budaya Gresik** menjadi **Pameran 3D Gresik** (`panel-pameran3d`, `js/model-3d-modal.js`, `js/community-views.js`, `@google/model-viewer` dengan AR & pemutaran otomatis audio lokal `assets/audios/*.mpeg` via `playAudioTrack` di `js/audio.js` saat `Lihat 3D & AR` dibuka), mengoptimalkan ukuran 3 model `.glb` di `assets/3d_models/` via `scripts/optimize-3d.mjs` (total dari ~53 MiB menjadi ~4,08 MiB), memakai gambar awal dari `assets/placeholders/`, membuat tabel `models_3d` (termasuk kolom `audio_path` di `supabase/schema.sql` & `supabase/migration_models_3d.sql`), serta menambah editor judul, teks perkenalan, pemilih berkas audio, dan tombol `Uji Audio` di Ruang Pengelola (`js/admin-catalog-views.js` & `js/admin-catalog-modals.js`). Cache PWA diperbarui ke `esipena-shell-v15`.

@@ -10,7 +10,7 @@ import {
   SUBMISSION_STATUSES,
   adminGetSession,
   adminListAllBooks,
-  adminListAllCulturePrompts,
+  adminListAllModels3d,
   adminListWorks,
   adminSignIn,
   adminSignOut
@@ -31,7 +31,8 @@ const adminUiState = {
 };
 
 let activeAdminContainer = null;
-let snapshotGetter = () => ({ books: [], culturePrompts: [], madingWorks: [], siteSettings: {} });
+let tabSyncBound = false;
+let snapshotGetter = () => ({ books: [], models3d: [], madingWorks: [], siteSettings: {} });
 
 function renderLoginScreen(container) {
   const supabaseActive = isSupabaseConfigured();
@@ -88,7 +89,10 @@ function renderSubmissionsList(listWrap) {
     return;
   }
   if (!works.length) {
-    listWrap.innerHTML = '<article class="empty-stage-note"><h3>Tidak Ada Naskah</h3><p>Belum ada naskah yang sesuai dengan filter status atau peran saat ini.</p></article>';
+    const emptyMsg = adminUiState.allWorks.length
+      ? 'Belum ada naskah yang sesuai dengan filter status atau peran saat ini.'
+      : 'Belum ada naskah masuk saat ini.';
+    listWrap.innerHTML = `<article class="empty-stage-note"><h3>Tidak Ada Naskah</h3><p>${emptyMsg}</p></article>`;
     return;
   }
 
@@ -142,14 +146,26 @@ function renderSubmissionsList(listWrap) {
   };
 }
 
-async function loadAndRenderWorks(container) {
+function getWorksSignature(list = []) {
+  return list
+    .map((w) => `${w.id || ''}|${w.tracking_code || ''}|${w.status || ''}|${w.updated_at || w.published_at || ''}|${w.reviewer_notes || ''}`)
+    .join(';');
+}
+
+async function loadAndRenderWorks(container, { silent = false } = {}) {
   if (!container) return;
   const listWrap = container.querySelector('#admin-works-list');
   const statsEl = container.querySelector('#admin-curation-stats');
   if (!listWrap) return;
 
-  adminUiState.loading = true;
-  renderSubmissionsList(listWrap);
+  const prevSig = getWorksSignature(adminUiState.works);
+  const prevAllSig = getWorksSignature(adminUiState.allWorks);
+  let shouldRender = !silent;
+
+  if (!silent) {
+    adminUiState.loading = true;
+    renderSubmissionsList(listWrap);
+  }
 
   try {
     const res = await adminListWorks({
@@ -158,24 +174,29 @@ async function loadAndRenderWorks(container) {
       search: adminUiState.search,
       fallbackWorks: snapshotGetter()?.madingWorks || []
     });
+    const nextSig = getWorksSignature(res.items);
+    const nextAllSig = getWorksSignature(res.allItems);
+    const changed = nextSig !== prevSig || nextAllSig !== prevAllSig;
+
     adminUiState.works = res.items;
     adminUiState.allWorks = res.allItems;
+    if (changed) shouldRender = true;
 
-    if (statsEl) {
+    if (statsEl && (changed || !statsEl.innerHTML)) {
       const waitCount = res.allItems.filter((w) => w.status === 'Menunggu Kurasi').length;
       const revCount = res.allItems.filter((w) => w.status === 'Perlu Revisi').length;
-      const pubCount = res.allItems.filter((w) => ['Lolos Mading', 'Masuk Antologi'].includes(w.status)).length;
+      const pubCount = res.allItems.filter((w) => w.status === 'Lolos Mading').length;
       statsEl.innerHTML = `Menunggu: <strong>${waitCount}</strong> &middot; Revisi: <strong>${revCount}</strong> &middot; Terbit: <strong>${pubCount}</strong>`;
     }
   } catch (err) {
-    showToast(err?.message || 'Gagal memuat daftar naskah masuk.', 'error');
+    if (!silent) showToast(err?.message || 'Gagal memuat daftar naskah masuk.', 'error');
     if (!adminGetSession()) {
       renderLoginScreen(container);
       return;
     }
   } finally {
     adminUiState.loading = false;
-    if (listWrap.isConnected) renderSubmissionsList(listWrap);
+    if (shouldRender && listWrap.isConnected) renderSubmissionsList(listWrap);
   }
 }
 
@@ -195,7 +216,7 @@ async function renderAdminWorkspace(container) {
           <strong class="admin-user-email">${escapeHtml(session.user?.email || 'Kurator')}</strong>
         </div>
         <div class="admin-subtabs" role="tablist" aria-label="Menu Ruang Pengelola">
-          <button type="button" class="filter-chip${isKurasi ? ' is-active' : ''}" data-admin-subtab="kurasi">Kurasi Naskah</button>
+          <button type="button" class="filter-chip${isKurasi ? ' is-active' : ''}" data-admin-subtab="kurasi">Kurasi Mading</button>
           <button type="button" class="filter-chip${!isKurasi ? ' is-active' : ''}" data-admin-subtab="katalog">Kelola Antologi</button>
         </div>
         <div class="admin-top-actions">
@@ -267,11 +288,11 @@ async function renderAdminWorkspace(container) {
     if (katalogPane instanceof HTMLElement) {
       const snap = snapshotGetter();
       let catalogBooks = snap?.books || [];
-      let catalogTopics = snap?.culturePrompts || [];
+      let catalogModels3d = snap?.models3d || [];
       try {
-        [catalogBooks, catalogTopics] = await Promise.all([
+        [catalogBooks, catalogModels3d] = await Promise.all([
           adminListAllBooks(catalogBooks),
-          adminListAllCulturePrompts(catalogTopics)
+          adminListAllModels3d(catalogModels3d)
         ]);
       } catch {
         // Gunakan snapshot saat ini bila pembacaan daftar lengkap terhambat
@@ -279,7 +300,7 @@ async function renderAdminWorkspace(container) {
       renderCatalogManager(katalogPane, {
         snapshot: snap,
         catalogBooks,
-        catalogTopics,
+        catalogModels3d,
         subSection: adminUiState.catalogSection,
         onSelectSubSection: (sec) => {
           adminUiState.catalogSection = sec;
@@ -300,6 +321,24 @@ export function renderAdminPanel(container, { getSnapshot } = {}) {
   if (!container) return;
   if (typeof getSnapshot === 'function') snapshotGetter = getSnapshot;
   activeAdminContainer = container;
+
+  if (!tabSyncBound) {
+    tabSyncBound = true;
+    window.addEventListener('esipena:tab-changed', (event) => {
+      if (event?.detail?.tab !== 'kelola' || !activeAdminContainer?.isConnected) return;
+      if (!adminGetSession()) {
+        if (!activeAdminContainer.querySelector('#admin-login-form')) {
+          renderLoginScreen(activeAdminContainer);
+        }
+        return;
+      }
+      if (adminUiState.subTab === 'kurasi' && activeAdminContainer.querySelector('#admin-works-list')) {
+        loadAndRenderWorks(activeAdminContainer, { silent: adminUiState.allWorks.length > 0 });
+      } else {
+        renderAdminWorkspace(activeAdminContainer);
+      }
+    });
+  }
 
   if (container.dataset.session3Mounted === '1') {
     return;

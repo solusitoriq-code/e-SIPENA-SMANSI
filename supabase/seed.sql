@@ -1,4 +1,4 @@
--- ============================================================================
+ -- ============================================================================
 -- Data Awal (Seed) — Portal Literasi Digital e-SIPENA SMAN 1 Sidayu
 -- Sinkron dengan data/esipena_data.json
 -- ============================================================================
@@ -182,84 +182,57 @@ ON CONFLICT (slug) DO UPDATE SET
   is_featured = EXCLUDED.is_featured;
 
 -- ----------------------------------------------------------------------------
--- 2. 5 Topik Jejak Budaya Gresik (Placeholder Terstruktur)
+-- 2. 3 Koleksi Pameran 3D Gresik (Damar Kurung, Jubung, Pudak)
 -- ----------------------------------------------------------------------------
-INSERT INTO public.culture_prompts (
-  id, slug, title, subtitle, youtube_id, article_summary, writing_prompt,
-  location_tag, duration_label, sort_order, is_active, is_placeholder
+INSERT INTO public.models_3d (
+  id, slug, title, introduction, category, model_path, placeholder_url, audio_path, sort_order, is_active
 ) VALUES
 (
-  '00000000-0000-4000-8000-000000000201',
-  'joko-samudro-dan-bukit-giri',
-  'Joko Samudro dan Bukit Giri: Cahaya Ilmu dari Bumi Gresik',
-  'Warisan pendidikan, akhlak, dan tradisi keilmuan Sunan Giri untuk generasi pelajar.',
-  '',
-  'Bukit Giri menjadi pusat syiar ilmu, seni, dan tata nilai masyarakat pesisir Gresik sejak abad ke-15. Nilai ketekunan menuntut ilmu dari kisah Joko Samudro menginspirasi semangat literasi pelajar SMAN 1 Sidayu.',
-  'Tuliskan cerpen atau esai reflektif tentang bagaimana keteladanan menuntut ilmu di Bukit Giri relevan dengan tantangan pelajar masa kini.',
-  'Giri, Gresik',
-  '04:30',
-  1, true, true
+  '00000000-0000-4000-8000-000000000301',
+  'damar-kurung-gresik',
+  'Damar Kurung Khas Gresik',
+  'Damar Kurung adalah lentera tradisional khas Gresik yang dipopulerkan oleh maestro seni lukis Mbah Masmundari. Empat sisi lampion ini dihiasi lukisan dua dimensi yang dibaca berurutan dari bawah ke atas, menggambarkan denyut kehidupan masyarakat pesisir, suasana pasar, hingga tradisi menyambut bulan suci Ramadan. Selain menjadi penerang malam, Damar Kurung merupakan wujud literasi visual yang merekam kearifan lokal warga Gresik lintas generasi.',
+  'Seni & Tradisi',
+  'assets/3d_models/damar-kurung-3d.glb',
+  'assets/placeholders/damar_kurung__placeholder.jpeg',
+  'assets/audios/damar-kurung-audio.mpeg',
+  1, true
 ),
 (
-  '00000000-0000-4000-8000-000000000202',
-  'damar-kurung-masmundari',
-  'Damar Kurung Masmundari: Lentera Bercerita dari Masa Lampau',
-  'Seni lukis lampion khas Gresik karya Mbah Masmundari yang merekam denyut kehidupan warga.',
-  '',
-  'Setiap sisi Damar Kurung menampilkan panel kisah rakyat, pasar, dan tradisi Ramadan yang diceritakan secara visual dari bawah ke atas. Lentera kertas ini merupakan wujud literasi visual masyarakat Gresik.',
-  'Bayangkan satu panel Damar Kurung menyala di depan rumahmu; ceritakan kisah di balik gambar panel tersebut dalam bentuk cerpen atau puisi.',
-  'Kota Gresik',
-  '05:10',
-  2, true, true
+  '00000000-0000-4000-8000-000000000302',
+  'jubung-gresik',
+  'Jubung Kuliner Tradisional Gresik',
+  'Jubung adalah jajanan tradisional khas Gresik yang terbuat dari tepung ketan hitam, santan kelapa, dan gula merah yang dimasak hingga kenyal serta legit, lalu ditaburi biji wijen sangrai di atasnya. Keunikan Jubung terletak pada kemasannya yang berbentuk tabung kecil dari seludang atau upih daun pinang kering. Perpaduan rasa manis gurih dan kemasan alami ini mencerminkan kesabaran serta kecerdasan kuliner masyarakat pesisir Gresik.',
+  'Kuliner Khas',
+  'assets/3d_models/jubung-3d.glb',
+  'assets/placeholders/jubung__placeholder.jpeg',
+  'assets/audios/jubung-audio.mpeg',
+  2, true
 ),
 (
-  '00000000-0000-4000-8000-000000000203',
-  'pasar-bandeng-dan-otak-otak-bandeng',
-  'Pasar Bandeng dan Otak-Otak Bandeng: Simbol Kemakmuran Pesisir',
-  'Tradisi ekonomi rakyat pesisir utara Jawa yang merajut kebersamaan menjelang Idulfitri.',
-  '',
-  'Pasar Bandeng di Gresik dan kawasan pesisir Sidayu–Ujungpangkah memperlihatkan eratnya hubungan tambak, keluarga, dan gotong royong warga. Pengolahan otak-otak bandeng membutuhkan ketelitian dan kesabaran tinggi.',
-  'Susun esai budaya atau resensi kisah keluarga yang berlatar suasana riuh Pasar Bandeng dan proses mengolah bandeng khas pesisir.',
-  'Pesisir Gresik & Sidayu',
-  '04:15',
-  3, true, true
-),
-(
-  '00000000-0000-4000-8000-000000000204',
-  'pudak-dan-nasi-krawu',
-  'Pudak dan Nasi Krawu: Harmoni Rasa dan Kesabaran dalam Sajian',
-  'Kuliner tradisional Gresik yang menyimpan filosofi ketelatenan dan penghargaan pada alam.',
-  '',
-  'Kemasan pelepah pinang (ope) pada pudak dan racikan serundeng kelapa pada nasi krawu mencerminkan kecerdasan lokal menjaga cita rasa tanpa meninggalkan akar tradisi.',
-  'Ceritakan kenangan atau makna filosofis dari sepotong pudak maupun sepincuk nasi krawu sebagai metafora perjalanan hidup.',
-  'Gresik Selatan & Utara',
-  '03:55',
-  4, true, true
-),
-(
-  '00000000-0000-4000-8000-000000000205',
-  'bukit-surowiti-dan-petilasan-sunan-kalijaga',
-  'Bukit Surowiti dan Petilasan Sunan Kalijaga: Jejak Sunyi di Puncak Kapur',
-  'Panorama perbukitan Panceng–Sidayu sebagai ruang perenungan sejarah dan alam.',
-  '',
-  'Terletak tidak jauh dari wilayah Sidayu, kawasan perbukitan kapur Surowiti memadukan keindahan bentang alam dengan jejak sejarah spiritual Sunan Kalijaga dan tokoh lokal.',
-  'Tulis puisi atau catatan perjalanan imajinatif saat menapaki tangga batu Bukit Surowiti sambil merenungkan pesan pelestarian budaya lokal.',
-  'Panceng - Sidayu, Gresik',
-  '04:50',
-  5, true, true
+  '00000000-0000-4000-8000-000000000303',
+  'pudak-gresik',
+  'Pudak Kue Khas Kota Gresik',
+  'Pudak adalah kue basah ikonik dari Kabupaten Gresik yang diolah dari campuran tepung beras, gula pasir atau gula jawa, serta santan kelapa, dengan varian rasa putih, gula merah, sagu, hingga pandan yang harum. Adonan pudak dibungkus menggunakan pelepah daun pinang yang disebut ope, lalu diikat rapi dan dikukus hingga padat serta lembut. Hidangan ini menjadi buah tangan kebanggaan Gresik yang terus lestari dari tradisi masyarakat pesisir hingga masa kini.',
+  'Kuliner Khas',
+  'assets/3d_models/pudak-3d.glb',
+  'assets/placeholders/pudak_placeholder.png',
+  'assets/audios/pudak-audio.mpeg',
+  3, true
 )
 ON CONFLICT (slug) DO UPDATE SET
   title = EXCLUDED.title,
-  subtitle = EXCLUDED.subtitle,
-  article_summary = EXCLUDED.article_summary,
-  writing_prompt = EXCLUDED.writing_prompt,
-  location_tag = EXCLUDED.location_tag,
-  duration_label = EXCLUDED.duration_label,
+  introduction = EXCLUDED.introduction,
+  category = EXCLUDED.category,
+  model_path = EXCLUDED.model_path,
+  placeholder_url = EXCLUDED.placeholder_url,
+  audio_path = EXCLUDED.audio_path,
   sort_order = EXCLUDED.sort_order,
   is_active = EXCLUDED.is_active;
 
 -- ----------------------------------------------------------------------------
 -- 3. 8 Karya Mading Awal (Placeholder Siswa X-XII, Guru, Tendik)
+-- 3. Data awal naskah (submissions) dikosongkan agar kurasi dimulai dari kiriman riil
 -- ----------------------------------------------------------------------------
 INSERT INTO public.submissions (
   id, tracking_code, title, author_name, author_role, author_class_unit,
@@ -461,8 +434,10 @@ VALUES
       {
         "id": "doc-alur-kurasi",
         "title": "Alur Kurasi Mading Digital & Seleksi Antologi",
+        "title": "Alur Kurasi Mading Digital Warga Sekolah",
         "category": "Kurasi NLC",
         "summary": "Tahapan pemeriksaan oleh Tim Pustakawan & Guru Pembina dari Menunggu Kurasi hingga Masuk Antologi.",
+        "summary": "Tahapan pemeriksaan oleh Tim Pustakawan & Guru Pembina dari Menunggu Kurasi hingga Lolos Mading.",
         "url": "",
         "updated_label": "Edisi 2026 (Placeholder)"
       },

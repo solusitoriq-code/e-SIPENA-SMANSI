@@ -36,7 +36,15 @@ const ICONS = {
   minimize:
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>',
   camera:
-    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>'
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>',
+  cube:
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>',
+  rotateLeft:
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>',
+  rotateRight:
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>',
+  reset:
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>'
 };
 
 /**
@@ -265,10 +273,97 @@ export function renderSwipeCueHtml(currentPage, totalPages, hintText = 'Geser ki
 
   return `<div class="swipe-dots" role="navigation" aria-label="Penanda halaman">${dots}</div>
    `;
+}
 
-  // <button type="button" class="swipe-cue-arrow-btn" data-swipe-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''} aria-label="Halaman sebelumnya">&lsaquo;</button>
+const LITERARY_HTML_RE = /<(?:p|br|div|strong|b|em|i|u|blockquote|ul|ol|li|h[1-6]|span|font|script|style|iframe|object|embed|svg)\b[^>]*>/i;
+const DROP_HTML_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE', 'NOSCRIPT', 'FORM', 'INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
+const SAFE_HTML_TAGS = new Set(['P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'H3', 'H4']);
+const BLOCK_HTML_MAP = { DIV: 'P', H1: 'H3', H2: 'H3', H5: 'H4', H6: 'H4' };
+const BLOCK_TEXT_TAGS = new Set(['P', 'DIV', 'BR', 'LI', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
 
-  //  <span class="swipe-cue-text">${escapeHtml(hintText)} (${currentPage}/${totalPages})</span>
-  // <button type="button" class="swipe-cue-arrow-btn" data-swipe-page="${currentPage + 1}" ${currentPage >= totalPages ? 'disabled' : ''} aria-label="Halaman berikutnya">&rsaquo;</button>
+function parseSafeHtmlDom(raw) {
+  if (typeof DOMParser !== 'function' || typeof document === 'undefined') return null;
+  const doc = new DOMParser().parseFromString(String(raw || ''), 'text/html');
+  for (const el of [...doc.body.querySelectorAll([...DROP_HTML_TAGS].join(',').toLowerCase())]) el.remove();
+  return doc.body;
+}
 
+/**
+ * Mengambil teks polos bersih dari teks biasa, markdown ringan, atau HTML.
+ * @param {string} raw
+ * @returns {string}
+ */
+export function extractPlainLiteraryText(raw) {
+  const input = String(raw || '').trim();
+  if (!input) return '';
+  let text = input;
+  if (LITERARY_HTML_RE.test(input)) {
+    const body = parseSafeHtmlDom(input);
+    if (body) {
+      const parts = [];
+      const walk = (n) => {
+        if (n.nodeType === 3) parts.push(n.textContent || '');
+        else if (n.nodeType === 1) {
+          const blk = BLOCK_TEXT_TAGS.has(n.tagName.toUpperCase());
+          if (blk) parts.push(' ');
+          for (const c of n.childNodes) walk(c);
+          if (blk) parts.push(' ');
+        }
+      };
+      walk(body);
+      text = parts.join('');
+    } else {
+      text = input.replace(/<(script|style|iframe|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ');
+    }
+  }
+  return text.replace(/^>\s?/gm, '').replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/\*([^*\n]+)\*/g, '$1').replace(/\s+/g, ' ').trim();
+}
+
+const formatInlineLiterary = (line) =>
+  escapeHtml(line).replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+
+/**
+ * Merender teks karya sastra (plain text, markdown ringan, atau HTML aman tersanitasi).
+ * @param {string} raw
+ * @param {string} [fallbackText]
+ * @returns {string}
+ */
+export function renderFormattedLiteraryHtml(raw, fallbackText = '') {
+  const input = String(raw || '').replace(/\r\n?/g, '\n').trim();
+  if (!input) return fallbackText ? `<p>${escapeHtml(fallbackText)}</p>` : '';
+
+  if (LITERARY_HTML_RE.test(input)) {
+    const body = parseSafeHtmlDom(input);
+    if (body) {
+      const wrap = document.createElement('div');
+      const sanitize = (n) => {
+        if (n.nodeType === 3) return document.createTextNode(n.textContent || '');
+        if (n.nodeType !== 1) return null;
+        const tag = n.tagName.toUpperCase();
+        if (DROP_HTML_TAGS.has(tag)) return null;
+        const target = BLOCK_HTML_MAP[tag] || (SAFE_HTML_TAGS.has(tag) ? tag : '');
+        const out = target ? document.createElement(target.toLowerCase()) : document.createDocumentFragment();
+        if (target !== 'BR') {
+          for (const c of n.childNodes) { const clean = sanitize(c); if (clean) out.appendChild(clean); }
+        }
+        return out;
+      };
+      for (const c of body.childNodes) { const clean = sanitize(c); if (clean) wrap.appendChild(clean); }
+      if (wrap.innerHTML.trim()) return wrap.innerHTML;
+    }
+  }
+
+  const plain = LITERARY_HTML_RE.test(input)
+    ? input.replace(/<(script|style|iframe|svg)[\s\S]*?<\/\1>/gi, '').replace(/<[^>]+>/g, '\n')
+    : input;
+  const blocks = plain.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+  if (!blocks.length) return fallbackText ? `<p>${escapeHtml(fallbackText)}</p>` : '';
+
+  return blocks.map((block) => {
+    const lines = block.split('\n').map((l) => l.trimEnd()).filter(Boolean);
+    if (lines.length && lines.every((l) => /^\s*>/.test(l))) {
+      return `<blockquote>${lines.map((l) => formatInlineLiterary(l.replace(/^\s*>\s?/, ''))).join('<br>')}</blockquote>`;
+    }
+    return `<p>${lines.map(formatInlineLiterary).join('<br>')}</p>`;
+  }).join('');
 }

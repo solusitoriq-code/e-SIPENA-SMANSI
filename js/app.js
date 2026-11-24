@@ -4,10 +4,9 @@
  */
 
 import { APP_CONFIG } from './config.js';
-import { playSfx } from './audio.js';
-import { SafeStorage, incrementBookLike, loadPortalData } from './data-service.js';
+import { playSfx, stopSpeech } from './audio.js';
+import { incrementBookLike, loadPortalData } from './data-service.js';
 import {
-  applyRotation,
   bindHorizontalSwipe,
   bindKeyboardAndModalControls,
   bindTopHudAndDrawer,
@@ -16,16 +15,16 @@ import {
 import {
   openBookModal,
   renderBooksShelf,
-  renderCulturePanel,
   renderLibrarianPanel,
   renderMadingPanel,
+  renderModels3dPanel,
   updateHeroKpis
 } from './public-views.js';
 import { renderSubmissionPanel } from './submission-views.js';
 import { renderAdminPanel } from './admin-views.js';
 import { closeModal, showToast } from './ui-utils.js';
 
-const VALID_TABS = new Set(['rak', 'budaya', 'mading', 'pustakawan', 'kirim', 'kelola']);
+const VALID_TABS = new Set(['rak', 'pameran-3d', 'mading', 'pustakawan', 'kirim', 'kelola']);
 
 const appState = {
   activeTab: 'rak',
@@ -38,7 +37,7 @@ const appState = {
   snapshot: {
     source: 'local',
     books: [],
-    culturePrompts: [],
+    models3d: [],
     madingWorks: [],
     siteSettings: {}
   }
@@ -119,6 +118,17 @@ function renderBooksSection() {
   appState.bookPage = result.page;
 }
 
+function openSubmissionTracking({ withSfx = true } = {}) {
+  if (withSfx) playSfx('pop');
+  switchTab('kirim');
+  window.requestAnimationFrame(() => {
+    const trackCard = document.getElementById('sub-track-card');
+    const trackInput = document.getElementById('track-code-input');
+    trackCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (trackInput instanceof HTMLElement) trackInput.focus();
+  });
+}
+
 function renderMadingSection() {
   renderMadingPanel(document.getElementById('mading-grid'), {
     works: appState.snapshot.madingWorks,
@@ -128,22 +138,20 @@ function renderMadingSection() {
     onPageChange: (nextPage) => {
       appState.madingPage = nextPage;
       renderMadingSection();
-    }
+    },
+    onRequestSubmit: () => {
+      playSfx('pop');
+      switchTab('kirim', { focusPanel: true });
+    },
+    onRequestTrack: () => openSubmissionTracking()
   });
-}
-
-function handleWriteWithCultureTheme() {
-  closeModal();
-  switchTab('kirim');
-  showToast('Silakan tulis atau unggah karya PDF Anda pada formulir Kirim Karya.', 'info');
 }
 
 function renderAllPublicPanels() {
   updateHeroKpis(appState.snapshot);
   renderBooksSection();
-  renderCulturePanel(document.getElementById('culture-container'), {
-    topics: appState.snapshot.culturePrompts,
-    onSelectTheme: handleWriteWithCultureTheme
+  renderModels3dPanel(document.getElementById('models3d-container'), {
+    models: appState.snapshot.models3d
   });
   renderMadingSection();
   renderLibrarianPanel(document.getElementById('librarian-container'), {
@@ -169,10 +177,7 @@ function bindMobileKeyboardScrollGuard() {
     ) {
       return;
     }
-    const isCompactScreen =
-      window.innerHeight <= 540 ||
-      (typeof window.matchMedia === 'function' &&
-        window.matchMedia('(orientation: portrait) and (max-width: 1024px)').matches);
+    const isCompactScreen = window.innerHeight <= 680 || window.innerWidth <= 1024;
     if (!isCompactScreen) return;
     window.setTimeout(() => {
       if (document.activeElement === target) {
@@ -188,9 +193,13 @@ function bindMobileKeyboardScrollGuard() {
 /**
  * Mengaktifkan salah satu tab/panel Hub utama dan menyinkronkan Drawer.
  * @param {string} tabId
+ * @param {{ focusPanel?: boolean }} [options]
  */
-export function switchTab(tabId) {
+export function switchTab(tabId, { focusPanel = false } = {}) {
   const nextTab = VALID_TABS.has(tabId) ? tabId : 'rak';
+  if (appState.activeTab !== nextTab) {
+    stopSpeech();
+  }
   appState.activeTab = nextTab;
 
   for (const drawerBtn of document.querySelectorAll('#drawer-links [data-drawer-tab]')) {
@@ -203,6 +212,11 @@ export function switchTab(tabId) {
     const active = panel.getAttribute('data-panel') === nextTab;
     panel.classList.toggle('is-active', active);
     panel.toggleAttribute('hidden', !active);
+  }
+
+  if (focusPanel) {
+    const firstCtrl = document.querySelector('#stage-main .hub-panel.is-active button:not(:disabled), #stage-main .hub-panel.is-active input, #stage-main .hub-panel.is-active select');
+    if (firstCtrl instanceof HTMLElement) firstCtrl.focus();
   }
 
   window.dispatchEvent(new CustomEvent('esipena:tab-changed', { detail: { tab: nextTab } }));
@@ -299,6 +313,20 @@ function bindBookAndMadingFilters() {
       renderMadingSection();
     });
   }
+
+  document.getElementById('btn-mading-track')?.addEventListener('click', () => {
+    openSubmissionTracking();
+  });
+
+  document.getElementById('btn-mading-submit')?.addEventListener('click', () => {
+    playSfx('pop');
+    switchTab('kirim', { focusPanel: true });
+  });
+
+  document.getElementById('btn-kirim-back-mading')?.addEventListener('click', () => {
+    playSfx('click');
+    switchTab('mading', { focusPanel: true });
+  });
 }
 
 function handleInitialDeepLink() {
@@ -309,7 +337,7 @@ function handleInitialDeepLink() {
 
   if (VALID_TABS.has(queryTab)) switchTab(queryTab);
   else if (VALID_TABS.has(pathTab)) switchTab(pathTab);
-  else if (pathTab === 'lacak') switchTab('kirim');
+  else if (pathTab === 'lacak') openSubmissionTracking({ withSfx: false });
 
   if (bookParam) {
     const matched = appState.snapshot.books.find(
@@ -327,7 +355,6 @@ function handleInitialDeepLink() {
 }
 
 async function initApp() {
-  applyRotation(SafeStorage.getItem(APP_CONFIG.STORAGE_KEYS.rotate) || '90');
   updateAudioButtonUi();
   bindTopHudAndDrawer({ onSelectTab: switchTab });
   bindBookAndMadingFilters();

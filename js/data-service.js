@@ -8,10 +8,12 @@ import { APP_CONFIG, isSupabaseConfigured } from './config.js';
 import {
   SafeStorage,
   applyDemoOverridesToDataset,
+  ensureCurationResetEpoch,
   fetchWithTimeout,
   getSupabaseBaseUrl,
   getSupabaseHeaders
 } from './service-helpers.js';
+import { LOCAL_SUBMISSIONS_KEY, getLocalSubmissions } from './submission-service.js';
 
 export { SafeStorage };
 export {
@@ -30,15 +32,15 @@ export {
 export {
   BOOK_ROLES,
   adminCreateBook,
-  adminCreateCulturePrompt,
+  adminCreateModel3d,
   adminDeleteBook,
-  adminDeleteCulturePrompt,
+  adminDeleteModel3d,
   adminGetSession,
   adminListAllBooks,
-  adminListAllCulturePrompts,
+  adminListAllModels3d,
   adminListWorks,
   adminSaveBook,
-  adminSaveCulturePrompt,
+  adminSaveModel3d,
   adminSaveSetting,
   adminSignIn,
   adminSignOut,
@@ -53,7 +55,7 @@ const portalState = {
   loaded: false,
   source: 'local',
   books: [],
-  culturePrompts: [],
+  models3d: [],
   madingWorks: [],
   siteSettings: {}
 };
@@ -113,19 +115,21 @@ function mergeSiteSettings(localSettings = {}, remoteRows = []) {
 }
 
 /**
- * Memuat data utama portal (buku, budaya Gresik, mading digital, dan pengaturan sekolah)
+ * Memuat data utama portal (buku, model 3D Gresik, mading digital, dan pengaturan sekolah)
  * dari Supabase dengan fallback otomatis ke data/esipena_data.json.
  * @param {{ forceRefresh?: boolean }} [options]
- * @returns {Promise<{ source: string, books: any[], culturePrompts: any[], madingWorks: any[], siteSettings: Record<string, any> }>}
+ * @returns {Promise<{ source: string, books: any[], models3d: any[], madingWorks: any[], siteSettings: Record<string, any> }>}
  */
 export async function loadPortalData({ forceRefresh = false } = {}) {
+  ensureCurationResetEpoch(CACHED_SNAPSHOT_KEY, LOCAL_SUBMISSIONS_KEY);
+
   if (portalState.loaded && !forceRefresh) {
     return getPortalSnapshot();
   }
 
   let localData = {
     books: [],
-    culture_prompts: [],
+    models_3d: [],
     public_mading_works: [],
     site_settings: {}
   };
@@ -146,14 +150,14 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
       : Array.isArray(localData.books)
         ? localData.books
         : [];
-  let culturePrompts =
-    useCachedRemote && Array.isArray(cachedRemote.culturePrompts) && cachedRemote.culturePrompts.length > 0
-      ? cachedRemote.culturePrompts
-      : Array.isArray(localData.culture_prompts)
-        ? localData.culture_prompts
+  let models3d =
+    useCachedRemote && Array.isArray(cachedRemote.models3d) && cachedRemote.models3d.length > 0
+      ? cachedRemote.models3d
+      : Array.isArray(localData.models_3d)
+        ? localData.models_3d
         : [];
   let madingWorks =
-    useCachedRemote && Array.isArray(cachedRemote.madingWorks) && cachedRemote.madingWorks.length > 0
+    useCachedRemote && Array.isArray(cachedRemote.madingWorks)
       ? cachedRemote.madingWorks
       : Array.isArray(localData.public_mading_works)
         ? localData.public_mading_works
@@ -169,9 +173,9 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
     isSupabaseConfigured() && (typeof navigator === 'undefined' || navigator.onLine !== false);
 
   if (canTrySupabase) {
-    const [booksRes, cultureRes, madingRes, settingsRes] = await Promise.allSettled([
+    const [booksRes, modelsRes, madingRes, settingsRes] = await Promise.allSettled([
       fetchSupabaseJson('/rest/v1/books?select=*&is_published=eq.true&order=sort_order.asc,title.asc'),
-      fetchSupabaseJson('/rest/v1/culture_prompts?select=*&is_active=eq.true&order=sort_order.asc'),
+      fetchSupabaseJson('/rest/v1/models_3d?select=*&is_active=eq.true&order=sort_order.asc'),
       fetchSupabaseJson('/rest/v1/public_mading_works?select=*&order=published_at.desc'),
       fetchSupabaseJson('/rest/v1/site_settings?select=key,value,description,is_placeholder&is_public=eq.true')
     ]);
@@ -183,11 +187,11 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
       books = booksRes.value;
       source = 'supabase';
     }
-    if (cultureRes.status === 'fulfilled' && Array.isArray(cultureRes.value) && cultureRes.value.length > 0) {
-      culturePrompts = cultureRes.value;
+    if (modelsRes.status === 'fulfilled' && Array.isArray(modelsRes.value) && modelsRes.value.length > 0) {
+      models3d = modelsRes.value;
       source = 'supabase';
     }
-    if (madingRes.status === 'fulfilled' && Array.isArray(madingRes.value) && madingRes.value.length > 0) {
+    if (madingRes.status === 'fulfilled' && Array.isArray(madingRes.value)) {
       madingWorks = madingRes.value;
       source = 'supabase';
     }
@@ -199,7 +203,7 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
     if (source === 'supabase') {
       SafeStorage.setJson(CACHED_SNAPSHOT_KEY, {
         books,
-        culturePrompts,
+        models3d,
         madingWorks,
         siteSettings
       });
@@ -209,12 +213,13 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
   if (source === 'local') {
     const demoPatched = applyDemoOverridesToDataset({
       books: applyLocalLikeDeltas(books),
-      culturePrompts,
+      models3d,
       madingWorks,
+      localSubmissions: getLocalSubmissions(),
       siteSettings
     });
     books = demoPatched.books;
-    culturePrompts = demoPatched.culturePrompts;
+    models3d = demoPatched.models3d;
     madingWorks = demoPatched.madingWorks;
     siteSettings = demoPatched.siteSettings;
   }
@@ -222,9 +227,7 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
   portalState.loaded = true;
   portalState.source = source;
   portalState.books = [...books].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
-  portalState.culturePrompts = [...culturePrompts].sort(
-    (a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)
-  );
+  portalState.models3d = [...models3d].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
   portalState.madingWorks = [...madingWorks];
   portalState.siteSettings = siteSettings;
 
@@ -233,13 +236,13 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
 
 /**
  * Mengembalikan salinan snapshot state data portal saat ini.
- * @returns {{ source: string, books: any[], culturePrompts: any[], madingWorks: any[], siteSettings: Record<string, any> }}
+ * @returns {{ source: string, books: any[], models3d: any[], madingWorks: any[], siteSettings: Record<string, any> }}
  */
 export function getPortalSnapshot() {
   return {
     source: portalState.source,
     books: portalState.books,
-    culturePrompts: portalState.culturePrompts,
+    models3d: portalState.models3d,
     madingWorks: portalState.madingWorks,
     siteSettings: portalState.siteSettings
   };

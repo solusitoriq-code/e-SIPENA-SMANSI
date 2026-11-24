@@ -1,6 +1,6 @@
 /* ==========================================================================
    e-SIPENA SMA Negeri 1 Sidayu — Gaya Cetak Lembar QR A4
-   Mereset paksa rotasi landscape dan batasan 16:9 agar bersih di kertas A4
+   Mereset batasan kanvas 16:9 agar bersih di kertas A4
    ========================================================================== */
 
 @page {
@@ -19,9 +19,7 @@
     display: block !important;
   }
 
-  #app-container,
-  body[data-rotate="90"] #app-container,
-  body[data-rotate="270"] #app-container {
+  #app-container {
     position: static !important;
     top: auto !important;
     left: auto !important;

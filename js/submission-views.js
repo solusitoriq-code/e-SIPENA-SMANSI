@@ -1,6 +1,6 @@
 /**
  * Modul Tampilan Kirim Karya & Cek Status Tanpa Login (Fitur 4) — e-SIPENA SMAN 1 Sidayu
- * Merender formulir kirim karya 2-kolom ringkas (teks + unggah PDF maks. 3 MB ke Google Drive)
+ * Merender formulir kirim karya 2-mode (Unggah PDF maks. 3 MB atau Tulis Naskah Langsung)
  * dan menghubungkan panel lacak status SPN-XXXXXX tanpa login.
  */
 
@@ -24,12 +24,76 @@ import { createIcon, escapeHtml, showToast } from './ui-utils.js';
 
 let snapshotGetter = () => ({ madingWorks: [] });
 let selectedPdfFile = null;
+let submissionMode = 'pdf';
 
 function formatFileSize(bytes) {
   const num = Number(bytes || 0);
   if (num < 1024) return `${num} B`;
   if (num < 1024 * 1024) return `${(num / 1024).toFixed(1)} KB`;
   return `${(num / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function updateCharCounter(inputEl, counterEl, maxLen) {
+  if (!(counterEl instanceof HTMLElement)) return;
+  const len = inputEl && 'value' in inputEl ? String(inputEl.value || '').length : 0;
+  counterEl.textContent = `${len}/${maxLen}`;
+}
+
+function setSubmissionMode(container, mode) {
+  submissionMode = mode === 'text' ? 'text' : 'pdf';
+  const isPdf = submissionMode === 'pdf';
+
+  for (const btn of container.querySelectorAll('[data-submit-mode]')) {
+    const active = btn.getAttribute('data-submit-mode') === submissionMode;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  }
+
+  const pdfPanel = container.querySelector('#sub-pdf-panel');
+  const textPanel = container.querySelector('#sub-text-panel');
+  if (pdfPanel instanceof HTMLElement) pdfPanel.hidden = !isPdf;
+  if (textPanel instanceof HTMLElement) textPanel.hidden = isPdf;
+
+  const summaryLabel = container.querySelector('#sub-summary-label');
+  const summaryHint = container.querySelector('#sub-summary-hint');
+  const summaryInput = container.querySelector('#sub-summary');
+  const bodyInput = container.querySelector('#sub-body-text');
+  if (summaryLabel) summaryLabel.textContent = isPdf ? 'Ringkasan / Sinopsis Karya *' : 'Ringkasan Karya (Opsional)';
+  if (summaryHint) {
+    summaryHint.textContent = isPdf
+      ? 'Wajib diisi 1-2 kalimat untuk tampilan kartu Mading Digital.'
+      : 'Opsional — otomatis dirangkum dari awal teks naskah bila dikosongkan.';
+  }
+  if (summaryInput instanceof HTMLTextAreaElement) summaryInput.required = isPdf;
+  if (bodyInput instanceof HTMLTextAreaElement) bodyInput.required = !isPdf;
+}
+
+function applyMarkdownShortcut(textarea, kind) {
+  if (!(textarea instanceof HTMLTextAreaElement)) return;
+  const start = textarea.selectionStart ?? textarea.value.length;
+  const end = textarea.selectionEnd ?? textarea.value.length;
+  const selected = textarea.value.slice(start, end);
+  let insert = '';
+  let selStart = 0;
+  let selEnd = 0;
+
+  if (kind === 'bold' || kind === 'italic') {
+    const marker = kind === 'bold' ? '**' : '*';
+    const sample = selected || (kind === 'bold' ? 'tebal' : 'miring');
+    insert = `${marker}${sample}${marker}`;
+    selStart = marker.length;
+    selEnd = marker.length + sample.length;
+  } else {
+    const lines = (selected || 'Kutipan karya').split('\n').map((l) => (l.startsWith('> ') ? l : `> ${l}`));
+    insert = lines.join('\n');
+    selStart = 2;
+    selEnd = insert.length;
+  }
+
+  textarea.setRangeText(insert, start, end, 'select');
+  textarea.focus();
+  textarea.setSelectionRange(start + selStart, start + selEnd);
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 function updateSelectedFileUi(container, file, errorMsg = '') {
@@ -45,7 +109,7 @@ function updateSelectedFileUi(container, file, errorMsg = '') {
   }
   if (!file) {
     statusEl.className = 'file-status-text';
-    statusEl.textContent = 'Format .pdf maksimal 3 MB (opsional jika mengetik teks lengkap).';
+    statusEl.textContent = 'Wajib format .pdf maksimal 3 MB (cocok untuk novel, cerpen, maupun naskah berdesain).';
     if (clearBtn instanceof HTMLElement) clearBtn.hidden = true;
     return;
   }
@@ -60,6 +124,22 @@ function bindSubmissionEvents(container) {
   const clearFileBtn = container.querySelector('#btn-sub-clear-file');
   const submitBtn = container.querySelector('#btn-sub-submit');
   const trackForm = container.querySelector('#track-status-form');
+  const summaryEl = container.querySelector('#sub-summary');
+  const summaryCountEl = container.querySelector('#sub-summary-count');
+  const bodyEl = container.querySelector('#sub-body-text');
+  const bodyCountEl = container.querySelector('#sub-body-count');
+  const consentEl = container.querySelector('#sub-anti-plagiat');
+
+  const syncSubmitEnabled = (isSubmitting = false) => {
+    if (!(submitBtn instanceof HTMLButtonElement)) return;
+    const agreed = consentEl instanceof HTMLInputElement && consentEl.checked;
+    submitBtn.disabled = isSubmitting || !agreed;
+  };
+  consentEl?.addEventListener('change', () => syncSubmitEnabled(false));
+  syncSubmitEnabled(false);
+
+  summaryEl?.addEventListener('input', () => updateCharCounter(summaryEl, summaryCountEl, 500));
+  bodyEl?.addEventListener('input', () => updateCharCounter(bodyEl, bodyCountEl, 15000));
 
   fileInput?.addEventListener('change', async () => {
     const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] || null : null;
@@ -99,12 +179,6 @@ function bindSubmissionEvents(container) {
     };
     const agreed = Boolean(form.querySelector('#sub-anti-plagiat')?.checked);
 
-    if (!agreed) {
-      playSfx('error');
-      showToast('Centang pernyataan anti-plagiat sebelum mengirim karya.', 'error');
-      return;
-    }
-
     const payload = {
       title: getVal('sub-title'),
       author_name: getVal('sub-author-name'),
@@ -114,21 +188,27 @@ function bindSubmissionEvents(container) {
       culture_theme: '',
       contact_wa: getVal('sub-contact-wa'),
       summary: getVal('sub-summary'),
-      body_text: getVal('sub-body-text'),
+      body_text: submissionMode === 'text' ? getVal('sub-body-text') : '',
       anti_plagiarism_agreed: agreed
     };
 
-    if (!payload.summary && !payload.body_text && !selectedPdfFile) {
-      playSfx('error');
-      showToast('Isi ringkasan/teks karya atau lampirkan berkas PDF maks. 3 MB.', 'error');
-      return;
+    const fail = (msg) => { playSfx('error'); showToast(msg, 'error'); };
+    if (!payload.author_class_unit) return fail('Kelas atau unit tugas wajib diisi.');
+    if (!payload.author_name) return fail('Nama lengkap penulis wajib diisi.');
+    if (!payload.title) return fail('Judul karya wajib diisi.');
+    if (submissionMode === 'pdf') {
+      if (!payload.summary) return fail('Isi ringkasan karya (1-2 kalimat) untuk kartu Mading.');
+      if (!selectedPdfFile) return fail('Pilih berkas PDF maksimal 3 MB terlebih dahulu.');
+    } else if (!payload.body_text) {
+      return fail('Ketik isi teks naskah terlebih dahulu.');
     }
+    if (!agreed) return fail('Centang pernyataan anti-plagiat sebelum mengirim karya.');
 
     submitBtn.disabled = true;
     const defaultLabel = submitBtn.innerHTML;
 
     try {
-      if (selectedPdfFile) {
+      if (submissionMode === 'pdf' && selectedPdfFile) {
         submitBtn.textContent = 'Mengunggah PDF ke Drive...';
         const uploadRes = await uploadPdfToGDrive(selectedPdfFile);
         payload.gdrive_file_id = uploadRes.fileId;
@@ -147,7 +227,10 @@ function bindSubmissionEvents(container) {
 
       form.reset();
       selectedPdfFile = null;
+      setSubmissionMode(container, 'pdf');
       updateSelectedFileUi(container, null);
+      updateCharCounter(summaryEl, summaryCountEl, 500);
+      updateCharCounter(bodyEl, bodyCountEl, 15000);
 
       playSfx('success');
       showToast(`Naskah terkirim dengan Kode Lacak ${result.trackingCode}.`, 'success');
@@ -155,8 +238,8 @@ function bindSubmissionEvents(container) {
       playSfx('error');
       showToast(err?.message || 'Gagal mengirim karya.', 'error');
     } finally {
-      submitBtn.disabled = false;
       submitBtn.innerHTML = defaultLabel;
+      syncSubmitEnabled(false);
     }
   });
 
@@ -168,6 +251,20 @@ function bindSubmissionEvents(container) {
   container.addEventListener('click', async (event) => {
     const target = event.target instanceof HTMLElement ? event.target : null;
     if (!target) return;
+
+    const modeBtn = target.closest('[data-submit-mode]');
+    if (modeBtn instanceof HTMLElement) {
+      playSfx('click');
+      setSubmissionMode(container, modeBtn.dataset.submitMode || 'pdf');
+      return;
+    }
+
+    const fmtBtn = target.closest('[data-md-fmt]');
+    if (fmtBtn instanceof HTMLElement) {
+      playSfx('click');
+      applyMarkdownShortcut(bodyEl, fmtBtn.dataset.mdFmt || 'bold');
+      return;
+    }
 
     if (target.closest('#btn-copy-tracking-code')) {
       const code = container.querySelector('#receipt-code-text')?.textContent?.trim() || '';
@@ -217,7 +314,7 @@ export function renderSubmissionPanel(container, { getSnapshot } = {}) {
     <div class="submission-layout">
       <section class="sub-card" id="sub-form-card" aria-labelledby="sub-form-heading">
         <div class="sub-card-head">
-          <h3 id="sub-form-heading">Formulir Kirim Karya (Tanpa Login)</h3>
+          <h3 id="sub-form-heading">Formulir Kirim Karya</h3>
           <span class="panel-badge">PDF Maks. ${maxMb} MB</span>
         </div>
         <form id="submission-form" class="sub-form" novalidate>
@@ -228,23 +325,48 @@ export function renderSubmissionPanel(container, { getSnapshot } = {}) {
             <label class="form-field"><span>No. WhatsApp (Opsional)</span><input id="sub-contact-wa" type="tel" placeholder="08xxxxxxxxxx (untuk kurator)" maxlength="24"></label>
             <label class="form-field form-field-span2"><span>Judul Karya *</span><input id="sub-title" type="text" placeholder="Tulis judul novel, cerpen, atau puisi" required maxlength="140"></label>
             <label class="form-field form-field-span2"><span>Kategori Karya *</span><select id="sub-category" required>${SUBMISSION_CATEGORIES.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}</select></label>
-            <label class="form-field form-field-span2"><span>Ringkasan Karya</span><textarea id="sub-summary" rows="2" placeholder="Ringkasan singkat isi karya (1-2 kalimat)..." maxlength="500"></textarea></label>
-            <label class="form-field form-field-span2"><span>Teks Naskah (Opsional jika unggah PDF)</span><textarea id="sub-body-text" rows="3" placeholder="Ketik teks puisi, cerpen singkat, atau kutipan novel..." maxlength="15000"></textarea></label>
+            <label class="form-field form-field-span2">
+              <div class="field-head-row">
+                <span id="sub-summary-label">Ringkasan / Sinopsis Karya *</span>
+                <span id="sub-summary-count" class="char-counter">0/500</span>
+              </div>
+              <textarea id="sub-summary" rows="2" placeholder="Ringkasan 1-2 kalimat yang tampil di kartu Mading..." maxlength="500" required></textarea>
+              <small id="sub-summary-hint" class="field-helper-text">Wajib diisi 1-2 kalimat untuk tampilan kartu Mading Digital.</small>
+            </label>
           </div>
-          <div class="file-drop-box">
+          <div class="sub-mode-section">
+            <span class="sub-mode-title">Isi Karya *</span>
+            <div class="sub-mode-switch" role="tablist" aria-label="Pilih cara kirim isi karya">
+              <button type="button" role="tab" id="tab-sub-mode-pdf" class="sub-mode-btn is-active" data-submit-mode="pdf" aria-selected="true">Unggah PDF (Maks. ${maxMb} MB)</button>
+              <button type="button" role="tab" id="tab-sub-mode-text" class="sub-mode-btn" data-submit-mode="text" aria-selected="false">Tulis Naskah Langsung</button>
+            </div>
+          </div>
+          <div id="sub-pdf-panel" class="file-drop-box">
             <div class="file-picker-row">
               <label class="secondary-btn file-picker-label" for="sub-pdf-file">Pilih Berkas PDF</label>
               <input id="sub-pdf-file" type="file" accept=".pdf,application/pdf" class="sr-only-input">
               <button type="button" class="secondary-btn" id="btn-sub-clear-file" hidden>Hapus</button>
             </div>
-            <p id="sub-file-status" class="file-status-text">Format .pdf maksimal ${maxMb} MB (opsional jika mengetik teks lengkap).</p>
+            <p id="sub-file-status" class="file-status-text">Wajib format .pdf maksimal ${maxMb} MB (cocok untuk novel, cerpen, maupun naskah berdesain).</p>
+          </div>
+          <div id="sub-text-panel" class="sub-text-panel" hidden>
+            <div class="editor-format-bar">
+              <div class="editor-fmt-buttons" role="group" aria-label="Pemformatan teks naskah">
+                <button type="button" class="editor-fmt-btn" data-md-fmt="bold"><strong>Tebal</strong></button>
+                <button type="button" class="editor-fmt-btn" data-md-fmt="italic"><em>Miring</em></button>
+                <button type="button" class="editor-fmt-btn" data-md-fmt="quote">Kutipan</button>
+              </div>
+              <span id="sub-body-count" class="char-counter">0/15000</span>
+            </div>
+            <textarea id="sub-body-text" rows="5" placeholder="Ketik puisi, cerpen singkat, atau kutipan karya..." maxlength="15000"></textarea>
+            <p class="file-status-text">Gunakan Enter untuk baris/bait baru, **tebal**, *miring*, atau &gt; kutipan.</p>
           </div>
           <label class="checkbox-consent">
             <input id="sub-anti-plagiat" type="checkbox" required>
             <span>Saya menyatakan karya ini asli buatan sendiri, bebas plagiat, dan bukan salinan utuh AI.</span>
           </label>
           <div class="sub-submit-row">
-            <button type="submit" id="btn-sub-submit" class="primary-btn inline-action-btn">${createIcon('send')}<span>Kirim Karya Sekarang</span></button>
+            <button type="submit" id="btn-sub-submit" class="primary-btn inline-action-btn" disabled>${createIcon('send')}<span>Kirim Karya Sekarang</span></button>
           </div>
         </form>
       </section>
@@ -252,11 +374,11 @@ export function renderSubmissionPanel(container, { getSnapshot } = {}) {
         <div id="sub-receipt-card" class="receipt-card" hidden aria-live="polite"></div>
         <section class="sub-card" id="sub-track-card" aria-labelledby="sub-track-heading">
           <div class="sub-card-head">
-            <h3 id="sub-track-heading">Cek Status Tanpa Login</h3>
+            <h3 id="sub-track-heading">Cek Status</h3>
             <span class="panel-badge">Kode SPN</span>
           </div>
           <form id="track-status-form" class="track-search-row">
-            <input id="track-code-input" type="text" placeholder="Contoh: SPN-DEMO01" maxlength="20" aria-label="Kode Lacak SPN">
+            <input id="track-code-input" type="text" placeholder="Contoh: SPN-XXXXXX" maxlength="20" aria-label="Kode Lacak SPN">
             <button type="submit" class="primary-btn inline-action-btn">${createIcon('search')}<span>Lacak</span></button>
           </form>
           <div class="track-history-bar"><span>Kode terbaru:</span><div id="track-recent-chips" class="history-chips"></div></div>
@@ -266,6 +388,7 @@ export function renderSubmissionPanel(container, { getSnapshot } = {}) {
     </div>
   `;
 
+  setSubmissionMode(container, 'pdf');
   bindSubmissionEvents(container);
   renderRecentCodeChips(container);
   renderTrackResult(container, null);

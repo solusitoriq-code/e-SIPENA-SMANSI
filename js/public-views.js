@@ -9,24 +9,24 @@ import { hasLikedBook } from './data-service.js';
 import { createIcon, escapeHtml, getRoleBadgeClass, renderSwipeCueHtml } from './ui-utils.js';
 
 export { openBookModal } from './book-modal.js';
-export { renderCulturePanel, renderLibrarianPanel, renderMadingPanel } from './community-views.js';
+export { renderLibrarianPanel, renderMadingPanel, renderModels3dPanel } from './community-views.js';
 
 /**
  * Memperbarui angka KPI pada Hero Banner dan jumlah buku per tombol filter peran.
- * @param {{ books?: any[], culturePrompts?: any[], siteSettings?: Record<string, any> }} snapshot
+ * @param {{ books?: any[], models3d?: any[], siteSettings?: Record<string, any> }} snapshot
  */
 export function updateHeroKpis(snapshot = {}) {
   const books = Array.isArray(snapshot.books) ? snapshot.books : [];
-  const culture = Array.isArray(snapshot.culturePrompts) ? snapshot.culturePrompts : [];
+  const models3d = Array.isArray(snapshot.models3d) ? snapshot.models3d : [];
   const kpi = snapshot.siteSettings?.kpi_stats || {};
 
   const novelsEl = document.getElementById('kpi-novels-2026');
   const books2025El = document.getElementById('kpi-books-2025');
-  const cultureEl = document.getElementById('kpi-culture-topics');
+  const models3dEl = document.getElementById('kpi-models-3d');
 
   if (novelsEl) novelsEl.textContent = String(books.length);
   if (books2025El) books2025El.textContent = String(kpi.books_2025_count ?? 23);
-  if (cultureEl) cultureEl.textContent = String(culture.length);
+  if (models3dEl) models3dEl.textContent = String(models3d.length);
 
   const countRole = (role) =>
     books.filter((b) => String(b.author_role || '').toLowerCase() === role.toLowerCase()).length;

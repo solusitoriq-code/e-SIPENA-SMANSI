@@ -11,8 +11,10 @@ import {
   getDemoOverrides,
   getSupabaseBaseUrl,
   getSupabaseHeaders,
+  mergeSubmissionRows,
   postTextJson
 } from './service-helpers.js';
+import { extractPlainLiteraryText } from './ui-utils.js';
 
 export const LOCAL_SUBMISSIONS_KEY = 'esipena_local_submissions';
 export const SUBMISSION_ROLES = Object.freeze(['Siswa X', 'Siswa XI', 'Siswa XII', 'Guru', 'Tendik']);
@@ -25,7 +27,6 @@ export const SUBMISSION_STATUSES = Object.freeze([
   'Menunggu Kurasi',
   'Perlu Revisi',
   'Lolos Mading',
-  'Masuk Antologi',
   'Ditolak'
 ]);
 
@@ -51,12 +52,21 @@ export function getLocalSubmissions() {
 }
 
 export function saveLocalSubmission(entry) {
+  const code = String(entry?.tracking_code || '').trim().toUpperCase();
   const list = getLocalSubmissions().filter(
-    (item) => item.tracking_code !== entry.tracking_code && item.id !== entry.id
+    (item) => item.id !== entry.id && (!code || String(item.tracking_code || '').trim().toUpperCase() !== code)
   );
   const next = [entry, ...list].slice(0, 60);
   SafeStorage.setJson(LOCAL_SUBMISSIONS_KEY, next);
   return next;
+}
+
+export function removeLocalSubmissionByCode(code) {
+  const cleanCode = String(code || '').trim().toUpperCase();
+  if (!cleanCode) return;
+  const list = getLocalSubmissions();
+  const next = list.filter((item) => String(item?.tracking_code || '').trim().toUpperCase() !== cleanCode);
+  if (next.length !== list.length) SafeStorage.setJson(LOCAL_SUBMISSIONS_KEY, next);
 }
 
 export function getTrackingHistory() {
@@ -223,10 +233,11 @@ export async function submitWork(payload = {}) {
   const authorClassUnit = String(payload.author_class_unit || '').trim();
   const category = String(payload.category || '').trim();
   const cultureTheme = String(payload.culture_theme || '').trim();
-  const summary = String(payload.summary || '').trim();
+  const rawSummary = extractPlainLiteraryText(payload.summary || '');
   const bodyText = String(payload.body_text || '').trim();
   const contactWa = String(payload.contact_wa || '').trim();
   const antiPlagiarismAgreed = payload.anti_plagiarism_agreed === true;
+  const hasPdf = Boolean(payload.file_name || payload.gdrive_preview_url);
 
   if (!title) throw new Error('Judul karya wajib diisi.');
   if (!authorName) throw new Error('Nama lengkap penulis wajib diisi.');
@@ -234,9 +245,16 @@ export async function submitWork(payload = {}) {
   if (!authorClassUnit) throw new Error('Kelas atau unit tugas wajib diisi.');
   if (!SUBMISSION_CATEGORIES.includes(category)) throw new Error('Kategori karya tidak valid.');
   if (!antiPlagiarismAgreed) throw new Error('Pernyataan anti-plagiat wajib dicentang.');
-  if (!summary && !bodyText && !payload.file_name && !payload.gdrive_preview_url) {
-    throw new Error('Isi ringkasan/teks karya atau lampirkan berkas PDF.');
+  if (!hasPdf && !bodyText) {
+    throw new Error('Lampirkan berkas PDF atau tulis teks naskah karya.');
   }
+  if (hasPdf && !rawSummary) {
+    throw new Error('Ringkasan karya wajib diisi untuk tampilan kartu Mading.');
+  }
+  const plainBody = bodyText ? extractPlainLiteraryText(bodyText) : '';
+  const summary =
+    rawSummary ||
+    (plainBody.length > 220 ? `${plainBody.slice(0, 217).trimEnd()}...` : plainBody);
 
   const trackingCode = String(payload.tracking_code || generateTrackingCode()).trim().toUpperCase();
   const fileSizeBytes = Math.min(
@@ -311,7 +329,11 @@ export async function submitWork(payload = {}) {
     created_at: nowIso,
     updated_at: nowIso
   };
-  saveLocalSubmission(localCopy);
+  if (source === 'supabase') {
+    removeLocalSubmissionByCode(trackingCode);
+  } else {
+    saveLocalSubmission(localCopy);
+  }
   recordTrackingHistory(trackingCode, title);
 
   return {
@@ -362,9 +384,7 @@ export async function trackSubmission(code, { fallbackWorks = [] } = {}) {
 
   const ov = getDemoOverrides().submissions;
   const localSubs = getLocalSubmissions();
-  const candidates = [...localSubs, ...fallbackWorks].map((item) =>
-    item && ov[item.id] ? { ...item, ...ov[item.id] } : item
-  );
+  const candidates = mergeSubmissionRows([...localSubs, ...fallbackWorks], ov);
   const matched = candidates.find(
     (item) => String(item?.tracking_code || '').trim().toUpperCase() === cleanCode
   );

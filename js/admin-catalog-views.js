@@ -1,6 +1,6 @@
 /**
- * Sub-Modul Pengelola Katalog & Placeholder (Fitur 5) — e-SIPENA SMAN 1 Sidayu
- * Menangani daftar & pembuatan/penyuntingan Buku/Novel, Topik Budaya Gresik,
+ * Sub-Modul Pengelola Katalog & Pameran 3D (Fitur 5) — e-SIPENA SMAN 1 Sidayu
+ * Menangani daftar & pembuatan/penyuntingan Buku/Novel, Koleksi Model 3D Gresik,
  * kontak WA admin, KPI buku 2025, serta dokumen Sudut Pustakawan.
  */
 
@@ -8,16 +8,15 @@ import { APP_CONFIG } from './config.js';
 import { playSfx } from './audio.js';
 import { adminSaveSetting } from './data-service.js';
 import { openBookEditorModal } from './admin-book-modal.js';
-import { openCultureEditorModal, openLibrarianDocModal } from './admin-catalog-modals.js';
+import { openLibrarianDocModal, openModel3dEditorModal } from './admin-catalog-modals.js';
 import { createIcon, escapeHtml, resolveGDriveLinks, showToast } from './ui-utils.js';
-import { extractYouTubeId } from './yt-player.js';
 
 export function renderCatalogManager(
   container,
-  { snapshot, catalogBooks = null, catalogTopics = null, subSection, onSelectSubSection, onUpdated }
+  { snapshot, catalogBooks = null, catalogModels3d = null, subSection, onSelectSubSection, onUpdated }
 ) {
   const books = Array.isArray(catalogBooks) ? catalogBooks : snapshot?.books || [];
-  const topics = Array.isArray(catalogTopics) ? catalogTopics : snapshot?.culturePrompts || [];
+  const models3d = Array.isArray(catalogModels3d) ? catalogModels3d : snapshot?.models3d || [];
   const settings = snapshot?.siteSettings || {};
   const contact = settings.contact_admin || {};
   const corner = settings.librarian_corner || {};
@@ -25,9 +24,9 @@ export function renderCatalogManager(
   const kpi = settings.kpi_stats || {};
   const docs = Array.isArray(corner.documents) ? corner.documents : [];
 
-  const section = ['books', 'culture', 'settings'].includes(subSection) ? subSection : 'books';
+  const section = ['books', 'models3d', 'settings'].includes(subSection) ? subSection : 'books';
   const nextBookOrder = books.reduce((m, b) => Math.max(m, Number(b.sort_order || 0)), 0) + 1;
-  const nextTopicOrder = topics.reduce((m, t) => Math.max(m, Number(t.sort_order || 0)), 0) + 1;
+  const nextModelOrder = models3d.reduce((m, item) => Math.max(m, Number(item.sort_order || 0)), 0) + 1;
 
   let bodyHtml = '';
   if (section === 'books') {
@@ -64,29 +63,34 @@ export function renderCatalogManager(
         .join('')}
       </div>
     `;
-  } else if (section === 'culture') {
+  } else if (section === 'models3d') {
     bodyHtml = `
       <div class="admin-section-bar">
-        <p class="admin-section-note">Tambah atau sunting topik Jejak Budaya Gresik beserta tautan video YouTube dan tugas menulis.</p>
-        <button type="button" class="primary-btn" id="btn-admin-add-culture">+ Tambah Topik Budaya</button>
+        <p class="admin-section-note">Kelola judul dan teks perkenalan Pameran 3D Gresik (sumber .glb &amp; gambar placeholder disimpan di aplikasi).</p>
+        <button type="button" class="primary-btn" id="btn-admin-add-model3d">+ Tambah Model 3D</button>
       </div>
       <div class="catalog-admin-grid">
-        ${topics
-        .map((topic, idx) => {
-          const ytId = extractYouTubeId(topic.youtube_id);
-          const inactiveBadge = topic.is_active === false ? '<span class="status-badge status-rejected">Nonaktif</span>' : '';
+        ${models3d
+        .map((item, idx) => {
+          const inactiveBadge = item.is_active === false ? '<span class="status-badge status-rejected">Disembunyikan</span>' : '<span class="status-badge status-approved">Tampil</span>';
+          const fileName = String(item.model_path || '').split('/').pop() || 'model.glb';
           return `
               <article class="admin-item-card">
                 <div class="admin-item-top">
-                  <span class="panel-badge">Topik ${idx + 1}</span>
+                  <span class="panel-badge">#${escapeHtml(item.sort_order ?? idx + 1)}</span>
                   <div class="admin-item-badges">
                     ${inactiveBadge}
-                    <span class="status-badge ${ytId ? 'status-approved' : 'status-revise'}">${ytId ? `YT: ${escapeHtml(ytId)}` : 'Placeholder'}</span>
                   </div>
                 </div>
-                <h4>${escapeHtml(topic.title)}</h4>
-                <p class="admin-item-meta">${escapeHtml(topic.location_tag || 'Gresik')} &middot; ${escapeHtml(topic.duration_label || '04:00')}</p>
-                <button type="button" class="secondary-btn inline-action-btn" data-edit-culture="${escapeHtml(topic.id)}">${createIcon('play')}<span>Sunting Topik &amp; YouTube</span></button>
+                <div class="admin-book-row">
+                  <img class="admin-model3d-thumb" src="${escapeHtml(item.placeholder_url || 'assets/images/logo-smansi.webp')}" alt="" width="56" height="56" loading="lazy" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
+                  <div>
+                    <h4>${escapeHtml(item.title)}</h4>
+                    <p class="admin-item-meta">${escapeHtml(item.category || 'Budaya Gresik')} &middot; ${escapeHtml(fileName)}</p>
+                  </div>
+                </div>
+                <p class="admin-model3d-snippet">${escapeHtml(item.introduction || '')}</p>
+                <button type="button" class="secondary-btn inline-action-btn" data-edit-model3d="${escapeHtml(item.id)}">${createIcon('cube')}<span>Sunting Judul &amp; Perkenalan</span></button>
               </article>
             `;
         })
@@ -166,7 +170,7 @@ export function renderCatalogManager(
   container.innerHTML = `
     <div class="admin-catalog-pills" role="tablist" aria-label="Kategori katalog pengelola">
       <button type="button" class="filter-chip${section === 'books' ? ' is-active' : ''}" data-cat-sec="books">Katalog Buku (${books.length})</button>
-      <button type="button" class="filter-chip${section === 'culture' ? ' is-active' : ''}" data-cat-sec="culture">Budaya Gresik (${topics.length})</button>
+      <button type="button" class="filter-chip${section === 'models3d' ? ' is-active' : ''}" data-cat-sec="models3d">Model 3D (${models3d.length})</button>
       <button type="button" class="filter-chip${section === 'settings' ? ' is-active' : ''}" data-cat-sec="settings">WA Admin &amp; Pustakawan</button>
     </div>
     ${bodyHtml}
@@ -189,9 +193,9 @@ export function renderCatalogManager(
       return;
     }
 
-    if (target.closest('#btn-admin-add-culture')) {
+    if (target.closest('#btn-admin-add-model3d')) {
       playSfx('pop');
-      openCultureEditorModal(null, onUpdated, { nextSortOrder: nextTopicOrder });
+      openModel3dEditorModal(null, onUpdated, { nextSortOrder: nextModelOrder });
       return;
     }
 
@@ -211,12 +215,12 @@ export function renderCatalogManager(
       return;
     }
 
-    const culBtn = target.closest('[data-edit-culture]');
-    if (culBtn instanceof HTMLElement) {
-      const topic = topics.find((t) => String(t.id) === culBtn.dataset.editCulture);
-      if (topic) {
+    const m3dBtn = target.closest('[data-edit-model3d]');
+    if (m3dBtn instanceof HTMLElement) {
+      const item = models3d.find((m) => String(m.id) === m3dBtn.dataset.editModel3d);
+      if (item) {
         playSfx('pop');
-        openCultureEditorModal(topic, onUpdated, { nextSortOrder: nextTopicOrder });
+        openModel3dEditorModal(item, onUpdated, { nextSortOrder: nextModelOrder });
       }
       return;
     }

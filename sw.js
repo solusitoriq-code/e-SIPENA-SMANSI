@@ -1,7 +1,9 @@
-const SHELL_CACHE = 'esipena-shell-v4';
-const RUNTIME_CACHE = 'esipena-runtime-v4';
+const SHELL_CACHE = 'esipena-shell-v15';
+const RUNTIME_CACHE = 'esipena-runtime-v15';
 const PDFJS_ORIGIN = 'https://cdn.jsdelivr.net';
 const PDFJS_PATH_PREFIX = '/npm/pdfjs-dist@4.8.69/';
+const MODEL_VIEWER_ORIGIN = 'https://ajax.googleapis.com';
+const MODEL_VIEWER_PREFIX = '/ajax/libs/model-viewer/';
 
 const APP_SHELL_ASSETS = [
   './',
@@ -30,6 +32,7 @@ const APP_SHELL_ASSETS = [
   './js/data-service.js',
   './js/media-upload.js',
   './js/modal-helper.js',
+  './js/model-3d-modal.js',
   './js/nav-controls.js',
   './js/pdf-cache.js',
   './js/pdf-slide-viewer.js',
@@ -40,8 +43,7 @@ const APP_SHELL_ASSETS = [
   './js/submission-views.js',
   './js/text-flipbook.js',
   './js/tracking-panel.js',
-  './js/ui-utils.js',
-  './js/yt-player.js'
+  './js/ui-utils.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -78,8 +80,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Runtime cache-first untuk modul PDF.js CDN agar tetap berfungsi saat offline
-  if (url.origin === PDFJS_ORIGIN && url.pathname.startsWith(PDFJS_PATH_PREFIX)) {
+  // Runtime cache-first untuk modul PDF.js & model-viewer CDN agar tetap berfungsi saat offline
+  if (
+    (url.origin === PDFJS_ORIGIN && url.pathname.startsWith(PDFJS_PATH_PREFIX)) ||
+    (url.origin === MODEL_VIEWER_ORIGIN && url.pathname.startsWith(MODEL_VIEWER_PREFIX))
+  ) {
     event.respondWith(
       caches.open(RUNTIME_CACHE).then(async (cache) => {
         const cached = await cache.match(request);
@@ -101,11 +106,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Runtime cache-first untuk sampul buku & gambar lokal (on-demand)
+  // Runtime cache-first untuk sampul, placeholder, model 3D, audio & gambar lokal (on-demand)
   if (
     url.pathname.includes('/assets/covers/') ||
     url.pathname.includes('/assets/images/') ||
-    url.pathname.includes('/assets/icons/')
+    url.pathname.includes('/assets/icons/') ||
+    url.pathname.includes('/assets/placeholders/') ||
+    url.pathname.includes('/assets/3d_models/') ||
+    url.pathname.includes('/assets/audios/')
   ) {
     event.respondWith(
       caches.open(RUNTIME_CACHE).then(async (cache) => {

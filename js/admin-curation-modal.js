@@ -10,9 +10,11 @@ import {
   closeModal,
   createIcon,
   escapeHtml,
+  extractPlainLiteraryText,
   formatDateId,
   getRoleBadgeClass,
   openModal,
+  renderFormattedLiteraryHtml,
   resolveGDriveLinks,
   showToast
 } from './ui-utils.js';
@@ -22,7 +24,6 @@ export function getAdminStatusClass(status) {
     'Menunggu Kurasi': 'status-badge status-wait',
     'Perlu Revisi': 'status-badge status-revise',
     'Lolos Mading': 'status-badge status-approved',
-    'Masuk Antologi': 'status-badge status-anthology',
     Ditolak: 'status-badge status-rejected'
   };
   return map[status] || 'status-badge status-wait';
@@ -54,11 +55,7 @@ export function openCurationModal(work, onCurated) {
     : '<p class="admin-muted-note">Naskah ini tidak melampirkan URL PDF Google Drive (dikirim via teks/lokal).</p>';
 
   const bodyTextHtml = work.body_text
-    ? `<article class="literary-reader-paper">${escapeHtml(work.body_text)
-        .split(/\n+/)
-        .filter(Boolean)
-        .map((p) => `<p>${p}</p>`)
-        .join('')}</article>`
+    ? `<article class="literary-reader-paper">${renderFormattedLiteraryHtml(work.body_text)}</article>`
     : '';
 
   const bodyEl = openModal({
@@ -76,7 +73,7 @@ export function openCurationModal(work, onCurated) {
         <h3 class="curation-work-title">${escapeHtml(work.title)}</h3>
         <p class="curation-work-author">Penulis: <strong>${escapeHtml(work.author_name)}</strong> (${escapeHtml(work.author_class_unit || '-')})${waWriterUrl ? ` &middot; <a href="${escapeHtml(waWriterUrl)}" target="_blank" rel="noopener noreferrer">Hubungi WA Penulis</a>` : ''}</p>
         ${work.culture_theme ? `<div class="mading-theme-banner">Tema Budaya Gresik: <strong>${escapeHtml(work.culture_theme)}</strong></div>` : ''}
-        ${work.summary ? `<div class="culture-article-box"><h3>Ringkasan</h3><p>${escapeHtml(work.summary)}</p></div>` : ''}
+        ${work.summary ? `<div class="culture-article-box"><h3>Ringkasan</h3><p>${escapeHtml(extractPlainLiteraryText(work.summary))}</p></div>` : ''}
         ${bodyTextHtml}
         ${pdfBlock}
 
@@ -102,7 +99,10 @@ export function openCurationModal(work, onCurated) {
     `
   });
 
+  let isSaving = false;
   const submitDecision = async (forcedStatus = null) => {
+    if (isSaving) return;
+    isSaving = true;
     const saveBtn = bodyEl?.querySelector('#btn-cur-save');
     const pubBtn = bodyEl?.querySelector('#btn-cur-publish');
     if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = true;
@@ -111,7 +111,11 @@ export function openCurationModal(work, onCurated) {
     try {
       const nextStatus = forcedStatus || bodyEl?.querySelector('#cur-status')?.value || work.status;
       const notes = String(bodyEl?.querySelector('#cur-notes')?.value || '').trim();
-      await adminUpdateWork(work.id, { status: nextStatus, reviewer_notes: notes });
+      await adminUpdateWork(work.id, {
+        status: nextStatus,
+        reviewer_notes: notes,
+        tracking_code: work.tracking_code
+      });
       if (typeof window.ESIPENA_APP?.refreshData === 'function') {
         await window.ESIPENA_APP.refreshData();
       }
@@ -125,6 +129,7 @@ export function openCurationModal(work, onCurated) {
       closeModal();
       await onCurated?.();
     } catch (err) {
+      isSaving = false;
       playSfx('error');
       showToast(err?.message || 'Gagal menyimpan keputusan kurasi.', 'error');
       if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = false;

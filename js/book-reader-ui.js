@@ -26,8 +26,9 @@ function formatSizeMb(bytes) {
  *   bodyEl: HTMLElement,
  *   book: Record<string, any>,
  *   gdrive: { fileId: string, previewUrl: string, openUrl: string, hasDriveFile: boolean },
- *   onStageChange: (viewName: string) => void,
- *   onBlobUrlReady: (url: string) => void
+ *   onStageChange?: (viewName: string) => void,
+ *   onBlobUrlReady?: (url: string) => void,
+ *   animateCover?: boolean
  * }} opts
  */
 export function createBookReaderController({
@@ -35,7 +36,8 @@ export function createBookReaderController({
   book,
   gdrive,
   onStageChange,
-  onBlobUrlReady
+  onBlobUrlReady,
+  animateCover = true
 }) {
   const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
   const cacheBadge = bodyEl.querySelector('#pdf-cache-badge');
@@ -61,6 +63,7 @@ export function createBookReaderController({
   };
 
   const playBookOpenAnimation = () => {
+    if (!animateCover) return;
     const intro = bodyEl.querySelector('#book-cover-intro');
     if (!(intro instanceof HTMLElement)) return;
     const reduceMotion =
@@ -116,7 +119,7 @@ export function createBookReaderController({
         offlineBanner.textContent =
           'Perangkat sedang offline dan PDF belum tersimpan di cache. Menampilkan Mode Baca Teks.';
       }
-      onStageChange('text');
+      onStageChange?.('text');
       return;
     }
 
@@ -131,7 +134,7 @@ export function createBookReaderController({
       revokeBlob();
       destroyViewer();
       activeObjectUrl = res.objectUrl;
-      onBlobUrlReady(activeObjectUrl);
+      onBlobUrlReady?.(activeObjectUrl);
       if (cacheBadge) {
         cacheBadge.classList.add('is-cached-ok');
         cacheBadge.textContent = `Tersimpan Offline (${formatSizeMb(res.sizeBytes)})`;
@@ -160,7 +163,7 @@ export function createBookReaderController({
     }
 
     if (cacheBadge) cacheBadge.textContent = 'Mode Teks Offline';
-    onStageChange('text');
+    onStageChange?.('text');
   };
 
   clearCacheBtn?.addEventListener('click', async () => {

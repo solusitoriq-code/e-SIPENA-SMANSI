@@ -1,5 +1,5 @@
 /* ==========================================================================
-   e-SIPENA SMA Negeri 1 Sidayu — Gaya Utama Kanvas 16:9 & Paksa Landscape
+   e-SIPENA SMA Negeri 1 Sidayu — Gaya Utama Kanvas 16:9 & Adaptif HP/Tablet
    ========================================================================== */
 
 :root {
@@ -111,22 +111,20 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* Paksa Tampilan Landscape pada HP & Tablet Portrait (<= 1024px) */
-@media screen and (orientation: portrait) and (max-width: 1024px) {
+/* Mode Adaptif Penuh Layar untuk HP Portrait, HP Landscape, dan Tablet */
+@media screen and (orientation: portrait) and (max-width: 1024px),
+       screen and (orientation: landscape) and (max-height: 500px),
+       screen and (hover: none) and (pointer: coarse) and (max-width: 1366px) {
   #app-container {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 100dvh;
-    height: 100dvw;
-    max-width: 177.78dvw;
-    max-height: 56.25dvh;
-    transform: translate(-50%, -50%) rotate(90deg);
-    transform-origin: center center;
-  }
-
-  body[data-rotate="270"] #app-container {
-    transform: translate(-50%, -50%) rotate(270deg);
+    width: 100%;
+    height: 100%;
+    width: 100dvw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: auto;
+    border: 0;
+    box-shadow: none;
   }
 }
 
@@ -418,6 +416,28 @@ button {
   box-shadow: var(--shadow-card);
 }
 
+.mading-header-actions,
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mading-cta-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.mading-header-actions .primary-btn,
+.mading-header-actions .secondary-btn {
+  flex-shrink: 0;
+}
+
 .panel-title {
   margin: 2px 0 0;
   font-family: var(--font-literary);
@@ -586,7 +606,7 @@ button {
   color: #ffffff;
 }
 
-.primary-btn:hover {
+.primary-btn:hover:not(:disabled) {
   background: var(--royal-700);
 }
 
@@ -1012,6 +1032,13 @@ button {
   font-size: 14px;
 }
 
+.empty-stage-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* ==========================================================================
    Slide-Over Drawer Menu
    ========================================================================== */
@@ -1076,7 +1103,7 @@ button {
 
 .drawer-utility-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
 
@@ -1404,6 +1431,7 @@ button:disabled {
   color: #1e293b;
 }
 
+.literary-reader-paper h3,
 .literary-reader-paper h4 {
   margin: 0 0 10px;
   color: var(--navy-950);
@@ -1411,6 +1439,26 @@ button:disabled {
 
 .literary-reader-paper p {
   margin: 0 0 12px;
+}
+
+.literary-reader-paper blockquote {
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border-left: 3px solid var(--gold-500);
+  background: #f6f1e4;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-style: italic;
+}
+
+.literary-reader-paper ul,
+.literary-reader-paper ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.literary-reader-paper p:last-child,
+.literary-reader-paper blockquote:last-child {
+  margin-bottom: 0;
 }
 
 /* Animasi 3D Buka Buku, Slide Teks & Cache PDF Offline */
@@ -1714,6 +1762,8 @@ button:disabled {
 .pdf-slide-viewport.is-zoomed {
   overflow: auto;
   touch-action: auto;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 .pdf-slide-shell.is-fullscreen-reader {
@@ -1736,6 +1786,7 @@ button:disabled {
 
 .pdf-flip-spread {
   position: relative;
+  margin: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1831,17 +1882,17 @@ button:disabled {
 }
 
 /* ==========================================================================
-   Fitur 3: Jejak Budaya Gresik, Mading Digital, Sudut Pustakawan
+   Fitur 3: Pameran 3D Gresik, Mading Digital, Sudut Pustakawan
    ========================================================================== */
 
-.culture-grid,
+.models3d-grid,
 .mading-cards-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
-.culture-card,
+.model3d-card,
 .mading-card,
 .librarian-doc-card,
 .librarian-info-card {
@@ -1854,23 +1905,28 @@ button:disabled {
   overflow: hidden;
 }
 
-.yt-frame {
+.model3d-card-media {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
   background: linear-gradient(135deg, var(--navy-950), var(--royal-700));
   overflow: hidden;
+  cursor: pointer;
 }
 
-.yt-thumb,
-.yt-iframe {
+.model3d-card-media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border: 0;
+  object-position: center 42%;
   display: block;
+  transition: transform 0.25s ease;
 }
 
-.yt-frame-overlay {
+.model3d-card:hover .model3d-card-media img {
+  transform: scale(1.03);
+}
+
+.model3d-card-badges {
   position: absolute;
   top: 8px;
   left: 8px;
@@ -1881,81 +1937,277 @@ button:disabled {
   pointer-events: none;
 }
 
-.yt-loc-tag,
-.yt-duration-tag {
-  padding: 2px 8px;
+.model3d-badge-type,
+.model3d-badge-cat {
+  padding: 3px 9px;
   border-radius: 999px;
-  background: rgba(9, 17, 30, 0.8);
+  background: rgba(9, 17, 30, 0.84);
   color: #f8fafc;
   font-size: 11px;
   font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
-.yt-inline-play-btn {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid #fde68a;
-  background: rgba(11, 27, 51, 0.9);
-  color: #ffffff;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.yt-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 28px 14px 12px;
-  text-align: center;
-}
-
-.yt-placeholder-body {
-  color: #e2e8f0;
-}
-
-.yt-placeholder-badge,
-.placeholder-pill {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(245, 158, 11, 0.22);
-  border: 1px solid rgba(253, 230, 138, 0.45);
+.model3d-badge-type {
+  background: rgba(15, 41, 74, 0.92);
   color: #fde68a;
-  font-size: 11px;
-  font-weight: 700;
+  border-color: rgba(253, 230, 138, 0.45);
 }
 
-.placeholder-pill {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #fde68a;
-}
-
-.yt-placeholder-caption {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: rgba(248, 250, 252, 0.82);
-}
-
-.culture-card-body,
+.model3d-card-body,
 .mading-card,
 .librarian-doc-card,
 .librarian-info-card {
   padding: 12px;
 }
 
-.culture-card-body {
+.model3d-card-body {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.model3d-card-title,
+.mading-card-title,
+.librarian-doc-title {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--navy-950);
+  line-height: 1.28;
+}
+
+.model3d-card-intro {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.48;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.model3d-card-actions {
+  margin-top: auto;
+  padding-top: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+.model3d-card-actions > button[data-action="open-model-3d"] {
+  flex: 1 1 auto;
+}
+
+/* Modal Pameran 3D & AR Split-View */
+.model3d-modal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+
+.model3d-stage-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.model3d-viewer-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 320px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 42%, #1d4e89 0%, #09111e 100%);
+  border: 1px solid var(--border-subtle);
+}
+
+.model3d-viewer-wrap model-viewer {
+  width: 100%;
+  height: 100%;
+  display: block;
+  --poster-color: transparent;
+}
+
+.model3d-ar-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 4;
+  box-shadow: 0 8px 20px rgba(9, 17, 30, 0.45);
+}
+
+.model3d-load-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(9, 17, 30, 0.08) 40%, rgba(9, 17, 30, 0.78) 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.model3d-load-overlay[hidden] {
+  display: none;
+}
+
+.model3d-load-card {
+  width: min(360px, 100%);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(15, 41, 74, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f8fafc;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.model3d-progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+.model3d-progress-fill {
+  width: 10%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f59e0b, #fde68a);
+  transition: width 0.2s ease;
+}
+
+.model3d-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.model3d-controls > button {
+  flex: 1 1 auto;
+  min-width: 108px;
+  white-space: nowrap;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+.model3d-controls > button.is-active {
+  background: #eff6ff;
+  border-color: var(--royal-700);
+  color: var(--navy-950);
+}
+
+.model3d-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.model3d-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.model3d-info-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.model3d-info-title {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 21px;
+  line-height: 1.25;
+  color: var(--navy-950);
+}
+
+.model3d-tts-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.model3d-tts-status {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--royal-700);
+}
+
+.model3d-intro-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.model3d-intro-paper {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.7;
+}
+
+.model3d-nav-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.admin-model3d-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--navy-900);
+  flex-shrink: 0;
+}
+
+.admin-model3d-snippet {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.admin-tts-field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.admin-field-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .culture-card-meta,
@@ -1974,19 +2226,6 @@ button:disabled {
   text-transform: uppercase;
 }
 
-.culture-card-title,
-.mading-card-title,
-.librarian-doc-title {
-  margin: 0;
-  font-family: var(--font-literary);
-  font-size: 15.5px;
-  font-weight: 700;
-  color: var(--navy-950);
-  line-height: 1.28;
-}
-
-.culture-card-subtitle,
-.culture-card-summary,
 .mading-card-summary,
 .librarian-doc-summary {
   margin: 0;
@@ -1994,41 +2233,6 @@ button:disabled {
   color: var(--text-secondary);
 }
 
-.culture-card-subtitle {
-  font-weight: 600;
-  color: var(--navy-800);
-}
-
-.culture-prompt-snippet {
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  background: #f1f5f9;
-  border-left: 3px solid var(--gold-500);
-  font-size: 12px;
-  color: var(--text-main);
-}
-
-.culture-card-actions {
-  margin-top: auto;
-  padding-top: 4px;
-  display: flex;
-  gap: 6px;
-}
-
-.culture-card-actions > button {
-  flex: 1 1 0;
-}
-
-.yt-modal-stage {
-  aspect-ratio: 16 / 9;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: #09111e;
-}
-
-.yt-modal-links,
-.culture-modal-meta,
-.culture-modal-actions,
 .mading-modal-badges,
 .mading-modal-controls,
 .librarian-modal-actions {
@@ -2038,9 +2242,7 @@ button:disabled {
   margin: 10px 0;
 }
 
-.yt-modal-placeholder,
 .culture-article-box,
-.culture-prompt-box,
 .librarian-guide-notes {
   padding: 12px 14px;
   border-radius: var(--radius-md);
@@ -2049,18 +2251,7 @@ button:disabled {
   margin-bottom: 10px;
 }
 
-.yt-modal-placeholder {
-  background: #0f294a;
-  color: #f8fafc;
-}
-
-.culture-prompt-box {
-  background: #fffbeb;
-  border-color: #fde68a;
-}
-
 .culture-article-box h3,
-.culture-prompt-box h3,
 .librarian-guide-notes h3 {
   margin: 0 0 6px;
   font-size: 14px;
@@ -2077,11 +2268,6 @@ button:disabled {
 .status-tag.is-lolos {
   background: #dcfce7;
   color: #166534;
-}
-
-.status-tag.is-antologi {
-  background: #fef3c7;
-  color: #92400e;
 }
 
 .mading-category,
@@ -2483,10 +2669,125 @@ button:disabled {
   min-width: 0;
 }
 
-.form-field > span {
+.form-field > span,
+.field-head-row > span:first-child,
+.sub-mode-title {
   font-size: 12.5px;
   font-weight: 700;
   color: var(--navy-900);
+}
+
+.field-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.char-counter {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.field-helper-text {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.sub-mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sub-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.sub-mode-btn {
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.sub-mode-btn.is-active {
+  background: var(--navy-900);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 41, 74, 0.22);
+}
+
+.sub-text-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: #f8fafc;
+}
+
+.sub-text-panel[hidden] {
+  display: none;
+}
+
+.sub-text-panel textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  scroll-margin-bottom: 52px;
+}
+
+.editor-format-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.editor-fmt-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.editor-fmt-btn {
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--navy-900);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.editor-fmt-btn:hover {
+  background: #eff6ff;
+  border-color: var(--royal-700);
 }
 
 .form-field input,
@@ -2815,11 +3116,6 @@ button:disabled {
 .status-approved {
   background: #dcfce7;
   color: #166534;
-}
-
-.status-anthology {
-  background: #ede9fe;
-  color: #5b21b6;
 }
 
 .status-rejected {
@@ -3206,7 +3502,7 @@ button:disabled {
 }
 
 /* ==========================================================================
-   Penyesuaian Tablet (Portrait Terputar 600-1024px & Landscape Ringkas)
+   Penyesuaian Tablet (Portrait Alami 600-1024px & Landscape Ringkas)
    ========================================================================== */
 
 @media screen and (max-height: 599px), screen and (max-width: 1079px) {
@@ -3215,8 +3511,71 @@ button:disabled {
   }
 }
 
-@media screen and (orientation: portrait) and (min-width: 600px) and (max-width: 1024px),
-       screen and (orientation: landscape) and (min-height: 501px) and (max-width: 1180px) {
+@media screen and (orientation: portrait) and (min-width: 600px) and (max-width: 1024px) {
+  .stage-main {
+    padding: 12px 14px;
+  }
+
+  .hero-strip {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .toolbar-row {
+    gap: 8px;
+  }
+
+  .shelf-edge-btn {
+    display: none;
+  }
+
+  .books-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(290px, 1fr);
+    gap: 12px;
+  }
+
+  .models3d-grid,
+  .mading-cards-grid,
+  .catalog-admin-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .model3d-modal-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .model3d-viewer-wrap {
+    min-height: 290px;
+    height: 38dvh;
+    flex: 0 0 auto;
+  }
+
+  .librarian-layout,
+  .submission-layout,
+  .admin-settings-split {
+    grid-template-columns: 1fr;
+  }
+
+  .book-detail-grid {
+    grid-template-columns: 196px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .panel-body-scroll,
+  .modal-body {
+    padding-bottom: 48px;
+  }
+}
+
+@media screen and (orientation: landscape) and (min-height: 501px) and (max-width: 1180px) {
   .stage-main {
     padding: 10px 12px;
   }
@@ -3251,10 +3610,21 @@ button:disabled {
     font-size: 12.5px;
   }
 
-  .culture-grid,
+  .models3d-grid,
   .mading-cards-grid,
   .catalog-admin-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .model3d-modal-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .model3d-viewer-wrap {
+    min-height: 290px;
+    height: 38dvh;
+    flex: 0 0 auto;
   }
 
   .submission-layout {
@@ -3263,11 +3633,353 @@ button:disabled {
 }
 
 /* ==========================================================================
-   Penyesuaian HP / Ponsel (iPhone SE, HP Portrait Terputar & HP Landscape)
+   Penyesuaian HP Portrait (<= 599px) — Tata Letak Vertikal Ramah Ibu Jari
    ========================================================================== */
 
-@media screen and (max-height: 500px),
-       screen and (orientation: portrait) and (max-width: 599px) {
+@media screen and (orientation: portrait) and (max-width: 599px) {
+  .top-hud {
+    min-height: 50px;
+    padding: 5px 10px;
+  }
+
+  .hud-logo {
+    width: 30px;
+    height: 30px;
+  }
+
+  .brand-title {
+    font-size: 15px;
+  }
+
+  .brand-subtitle {
+    font-size: 11px;
+  }
+
+  .stage-main {
+    padding: 8px 10px;
+  }
+
+  .hub-panel {
+    gap: 8px;
+  }
+
+  .hero-strip,
+  .panel-header {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .hero-strip {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .panel-header {
+    flex-wrap: wrap;
+  }
+
+  .hero-title,
+  .panel-title {
+    font-size: 16px;
+  }
+
+  .hero-subtitle {
+    display: none;
+  }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .kpi-chip {
+    min-width: 0;
+    padding: 4px 6px;
+  }
+
+  .kpi-chip strong {
+    font-size: 15px;
+  }
+
+  .kpi-chip span {
+    font-size: 10.5px;
+  }
+
+  .toolbar-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .filter-group,
+  #mading-role-filters {
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 6px;
+  }
+
+  .mading-header-actions,
+  .panel-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .mading-header-actions #mading-role-filters {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .mading-cta-group {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .filter-group::-webkit-scrollbar,
+  #mading-role-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-chip {
+    padding: 0 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .toolbar-right {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .search-box {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 8px;
+    gap: 5px;
+  }
+
+  .search-box input {
+    width: 100%;
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  .page-btn-label,
+  .shelf-edge-btn,
+  .pdf-edge-btn {
+    display: none;
+  }
+
+  .page-nav-btn {
+    min-width: 40px;
+    padding: 0 8px;
+  }
+
+  .books-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    gap: 8px;
+    padding: 1px;
+  }
+
+  .book-card {
+    flex-direction: column;
+  }
+
+  .book-cover-stage {
+    flex: 0 0 auto;
+    height: 156px;
+    padding: 8px 10px;
+  }
+
+  .book-year-tag {
+    top: 6px;
+    right: 6px;
+    font-size: 10px;
+  }
+
+  .book-card-body {
+    flex: 1 1 auto;
+    padding: 8px;
+    gap: 4px;
+    justify-content: space-between;
+  }
+
+  .book-card-title {
+    font-size: 13.5px;
+    -webkit-line-clamp: 2;
+    min-height: 2.5em;
+  }
+
+  .book-card-author {
+    font-size: 11.5px;
+  }
+
+  .book-card-actions {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 5px;
+    margin-top: 4px;
+  }
+
+  .book-card-actions .primary-btn {
+    grid-column: 1 / -1;
+  }
+
+  .like-pill-btn {
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .card-btn {
+    padding: 0 8px;
+    font-size: 12.5px;
+  }
+
+  .models3d-grid,
+  .mading-cards-grid,
+  .librarian-docs-grid,
+  .catalog-admin-grid,
+  .librarian-layout,
+  .submission-layout,
+  .admin-settings-split,
+  .sub-form-grid,
+  .admin-form-grid,
+  .inline-check-pair,
+  .book-detail-grid,
+  .model3d-modal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .model3d-modal-layout {
+    height: auto;
+  }
+
+  .model3d-viewer-wrap {
+    min-height: 230px;
+    height: 36dvh;
+    flex: 0 0 auto;
+  }
+
+  .model3d-controls > button {
+    min-width: calc(50% - 4px);
+    font-size: 12.5px;
+    padding: 0 8px;
+  }
+
+  .book-detail-grid {
+    gap: 12px;
+  }
+
+  .book-cover-modal {
+    width: 156px;
+  }
+
+  .book-editor-cover-row {
+    flex-direction: column;
+  }
+
+  .form-field-span2 {
+    grid-column: auto;
+  }
+
+  .sub-mobile-jumps {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .sub-mobile-jumps button {
+    flex: 1 1 0;
+    min-height: 40px;
+    font-size: 12.5px;
+  }
+
+  .admin-stats-note {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .modal-backdrop {
+    padding: 8px;
+  }
+
+  .modal-backdrop.is-modal-fullscreen {
+    padding: 0;
+  }
+
+  .modal-header {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .modal-title {
+    flex: 1 1 130px;
+    font-size: 15px;
+  }
+
+  #modal-toggle-size {
+    display: none;
+  }
+
+  .modal-header-tabs:not([hidden]) {
+    order: 3;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .modal-hdr-tab,
+  .modal-hdr-btn {
+    padding: 0 9px;
+    font-size: 12.5px;
+  }
+
+  .modal-body,
+  .app-modal.app-modal-fullscreen .modal-body {
+    padding: 12px;
+    padding-bottom: 48px;
+  }
+
+  .app-modal.is-reading-mode .modal-body,
+  .app-modal.app-modal-fullscreen.is-reading-mode .modal-body {
+    padding: 0;
+  }
+
+  .app-modal.is-reading-mode .pdf-slide-viewport {
+    padding: 4px;
+  }
+
+  .app-modal.app-modal-fullscreen .literary-slide-paper {
+    padding: 14px 16px;
+  }
+
+  .pdf-slide-toolbar {
+    bottom: 8px;
+    max-width: calc(100% - 14px);
+    padding: 5px 8px;
+    gap: 6px;
+  }
+
+  .pdf-toolbar-peek {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .panel-body-scroll {
+    padding-bottom: 52px;
+  }
+}
+
+/* ==========================================================================
+   Penyesuaian HP Landscape Ringkas (max-height: 500px)
+   ========================================================================== */
+
+@media screen and (orientation: landscape) and (max-height: 500px) {
   .top-hud {
     min-height: 42px;
     padding: 3px 10px;
@@ -3308,6 +4020,17 @@ button:disabled {
     max-width: 100%;
     overflow-x: auto;
     scrollbar-width: none;
+  }
+
+  .mading-header-actions {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+
+  .mading-header-actions #mading-role-filters {
+    flex: 1 1 200px;
+    min-width: 0;
   }
 
   #mading-role-filters::-webkit-scrollbar {
@@ -3391,11 +4114,12 @@ button:disabled {
     font-size: 12px;
   }
 
-  .shelf-edge-btn {
+  .shelf-edge-btn,
+  .pdf-edge-btn {
     display: none;
   }
 
-  /* Kartu Horizontal 2x2 agar sampul 148:210 dan tombol Baca/Detail muat utuh */
+  /* Kartu Horizontal 2x2 khusus HP Landscape agar muat di tinggi pendek */
   .books-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: minmax(98px, 1fr);
@@ -3520,6 +4244,7 @@ button:disabled {
 
   .modal-body {
     padding: 10px 12px;
+    padding-bottom: 48px;
   }
 
   .app-modal.app-modal-fullscreen .modal-body {
@@ -3550,10 +4275,6 @@ button:disabled {
     scrollbar-width: none;
     padding: 4px 8px;
     gap: 6px;
-  }
-
-  .pdf-edge-btn {
-    display: none;
   }
 
   .pdf-toolbar-peek {
@@ -3600,10 +4321,6 @@ button:disabled {
     padding-bottom: 52px;
   }
 
-  .modal-body {
-    padding-bottom: 48px;
-  }
-
   .sub-mobile-jumps {
     display: flex;
     gap: 6px;
@@ -3621,7 +4338,7 @@ button:disabled {
     width: 100%;
   }
 
-  .culture-grid,
+  .models3d-grid,
   .mading-cards-grid,
   .librarian-docs-grid,
   .catalog-admin-grid {

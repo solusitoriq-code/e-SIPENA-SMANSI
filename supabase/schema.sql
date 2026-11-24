@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS public.submissions (
   contact_wa text NOT NULL DEFAULT '',
   anti_plagiarism_agreed boolean NOT NULL DEFAULT false,
   status text NOT NULL DEFAULT 'Menunggu Kurasi' CHECK (
-    status IN ('Menunggu Kurasi', 'Perlu Revisi', 'Lolos Mading', 'Masuk Antologi', 'Ditolak')
+    status IN ('Menunggu Kurasi', 'Perlu Revisi', 'Lolos Mading', 'Ditolak')
   ),
   reviewer_notes text NOT NULL DEFAULT '',
   is_placeholder boolean NOT NULL DEFAULT false,
@@ -117,7 +117,7 @@ BEGIN
     NEW.tracking_code := UPPER(BTRIM(NEW.tracking_code));
   END IF;
 
-  IF NEW.status IN ('Lolos Mading', 'Masuk Antologi') AND NEW.published_at IS NULL THEN
+  IF NEW.status = 'Lolos Mading' AND NEW.published_at IS NULL THEN
     NEW.published_at := now();
   END IF;
 
@@ -138,31 +138,29 @@ CREATE TRIGGER trg_submissions_updated_at
   EXECUTE FUNCTION public.set_updated_at();
 
 -- ----------------------------------------------------------------------------
--- 3. Tabel culture_prompts (5 Topik Jejak Budaya Gresik)
+-- 3. Tabel models_3d (Koleksi Pameran 3D & AR Budaya Gresik)
 -- ----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.culture_prompts (
+CREATE TABLE IF NOT EXISTS public.models_3d (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slug text UNIQUE NOT NULL,
   title text NOT NULL,
-  subtitle text NOT NULL DEFAULT '',
-  youtube_id text NOT NULL DEFAULT '',
-  article_summary text NOT NULL,
-  writing_prompt text NOT NULL,
-  location_tag text NOT NULL DEFAULT 'Gresik',
-  duration_label text NOT NULL DEFAULT '04:00',
+  introduction text NOT NULL,
+  category text NOT NULL DEFAULT 'Budaya Gresik',
+  model_path text NOT NULL,
+  placeholder_url text NOT NULL DEFAULT '',
+  audio_path text NOT NULL DEFAULT '',
   sort_order integer NOT NULL DEFAULT 0,
   is_active boolean NOT NULL DEFAULT true,
-  is_placeholder boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_culture_prompts_active_sort
-  ON public.culture_prompts (is_active, sort_order);
+CREATE INDEX IF NOT EXISTS idx_models_3d_active_sort
+  ON public.models_3d (is_active, sort_order);
 
-DROP TRIGGER IF EXISTS trg_culture_prompts_updated_at ON public.culture_prompts;
-CREATE TRIGGER trg_culture_prompts_updated_at
-  BEFORE UPDATE ON public.culture_prompts
+DROP TRIGGER IF EXISTS trg_models_3d_updated_at ON public.models_3d;
+CREATE TRIGGER trg_models_3d_updated_at
+  BEFORE UPDATE ON public.models_3d
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
 
@@ -186,7 +184,7 @@ CREATE TRIGGER trg_site_settings_updated_at
 
 -- ----------------------------------------------------------------------------
 -- View Publik: public_mading_works
--- Hanya status 'Lolos Mading' dan 'Masuk Antologi', TANPA kolom contact_wa
+-- Hanya status 'Lolos Mading', TANPA kolom contact_wa
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE VIEW public.public_mading_works AS
 SELECT
@@ -208,30 +206,30 @@ SELECT
   COALESCE(published_at, updated_at, created_at) AS published_at,
   created_at
 FROM public.submissions
-WHERE status IN ('Lolos Mading', 'Masuk Antologi');
+WHERE status = 'Lolos Mading';
 
 -- ----------------------------------------------------------------------------
 -- Row Level Security (RLS) & Hak Akses Ketat
 -- ----------------------------------------------------------------------------
 ALTER TABLE public.books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.submissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.culture_prompts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.models_3d ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.books FROM anon;
 REVOKE ALL ON public.submissions FROM anon;
-REVOKE ALL ON public.culture_prompts FROM anon;
+REVOKE ALL ON public.models_3d FROM anon;
 REVOKE ALL ON public.site_settings FROM anon;
 REVOKE ALL ON public.public_mading_works FROM anon;
 
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT ON public.books TO anon;
 GRANT SELECT ON public.public_mading_works TO anon;
-GRANT SELECT ON public.culture_prompts TO anon;
+GRANT SELECT ON public.models_3d TO anon;
 GRANT SELECT ON public.site_settings TO anon;
 GRANT INSERT ON public.submissions TO anon;
 
-GRANT ALL ON public.books, public.submissions, public.culture_prompts, public.site_settings TO authenticated;
+GRANT ALL ON public.books, public.submissions, public.models_3d, public.site_settings TO authenticated;
 GRANT SELECT ON public.public_mading_works TO authenticated;
 
 -- Policy tabel books
@@ -271,17 +269,17 @@ CREATE POLICY submissions_authenticated_all
   USING (true)
   WITH CHECK (true);
 
--- Policy tabel culture_prompts
-DROP POLICY IF EXISTS culture_prompts_anon_select_active ON public.culture_prompts;
-CREATE POLICY culture_prompts_anon_select_active
-  ON public.culture_prompts
+-- Policy tabel models_3d
+DROP POLICY IF EXISTS models_3d_anon_select_active ON public.models_3d;
+CREATE POLICY models_3d_anon_select_active
+  ON public.models_3d
   FOR SELECT
   TO anon
   USING (is_active = true);
 
-DROP POLICY IF EXISTS culture_prompts_authenticated_all ON public.culture_prompts;
-CREATE POLICY culture_prompts_authenticated_all
-  ON public.culture_prompts
+DROP POLICY IF EXISTS models_3d_authenticated_all ON public.models_3d;
+CREATE POLICY models_3d_authenticated_all
+  ON public.models_3d
   FOR ALL
   TO authenticated
   USING (true)
