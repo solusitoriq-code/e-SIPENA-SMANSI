@@ -64,13 +64,14 @@ export function isModalOpen() {
 
 /**
  * Membuka modal terpusat dengan fokus keyboard dan pembersihan handler saat ditutup.
- * @param {{ title: string, html: string, wide?: boolean, fullscreen?: boolean, allowFullscreen?: boolean, onClose?: (() => void) | null }} options
+ * @param {{ title: string, html: string, headerTabsHtml?: string, wide?: boolean, fullscreen?: boolean, allowFullscreen?: boolean, onClose?: (() => void) | null }} options
  * @returns {HTMLElement | null}
  */
-export function openModal({ title, html, wide = false, fullscreen = false, allowFullscreen = false, onClose = null }) {
+export function openModal({ title, html, headerTabsHtml = '', wide = false, fullscreen = false, allowFullscreen = false, onClose = null }) {
   const backdrop = document.getElementById('modal-backdrop');
   const dialog = document.getElementById('app-modal');
   const titleEl = document.getElementById('modal-title');
+  const tabsEl = document.getElementById('modal-header-tabs');
   const bodyEl = document.getElementById('modal-body');
   if (!backdrop || !dialog || !titleEl || !bodyEl) return null;
 
@@ -90,9 +91,15 @@ export function openModal({ title, html, wide = false, fullscreen = false, allow
 
   const isFs = Boolean(fullscreen);
   const showFsHeader = isFs || Boolean(allowFullscreen);
+  dialog.classList.remove('is-reading-mode');
   dialog.classList.toggle('app-modal-wide', Boolean(wide));
   dialog.classList.toggle('app-modal-fullscreen', isFs);
   backdrop.classList.toggle('is-modal-fullscreen', isFs);
+
+  if (tabsEl) {
+    tabsEl.innerHTML = headerTabsHtml || '';
+    tabsEl.hidden = !headerTabsHtml;
+  }
 
   const sizeBtn = document.getElementById('modal-toggle-size');
   const fsBtn = document.getElementById('modal-browser-fs');
@@ -108,7 +115,7 @@ export function openModal({ title, html, wide = false, fullscreen = false, allow
   window.requestAnimationFrame(() => {
     const selector = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
     const firstFocusable =
-      bodyEl.querySelector('[data-autofocus]:not(:disabled)') ||
+      dialog.querySelector('[data-autofocus]:not(:disabled)') ||
       [...bodyEl.querySelectorAll(selector)].find((el) => el instanceof HTMLElement && !el.closest('[hidden]')) ||
       [...dialog.querySelectorAll(selector)].find((el) => el instanceof HTMLElement && !el.closest('[hidden]'));
     if (firstFocusable instanceof HTMLElement) {
@@ -128,6 +135,7 @@ export function openModal({ title, html, wide = false, fullscreen = false, allow
 export function closeModal(force = false) {
   const backdrop = document.getElementById('modal-backdrop');
   const dialog = document.getElementById('app-modal');
+  const tabsEl = document.getElementById('modal-header-tabs');
   const bodyEl = document.getElementById('modal-body');
   if (!backdrop || backdrop.hidden) return;
   if (modalCloseLocked && !force) return;
@@ -144,7 +152,8 @@ export function closeModal(force = false) {
 
   backdrop.hidden = true;
   backdrop.classList.remove('is-modal-fullscreen');
-  if (dialog) dialog.classList.remove('app-modal-wide', 'app-modal-fullscreen');
+  if (dialog) dialog.classList.remove('app-modal-wide', 'app-modal-fullscreen', 'is-reading-mode');
+  if (tabsEl) { tabsEl.hidden = true; tabsEl.innerHTML = ''; }
   const sizeBtn = document.getElementById('modal-toggle-size');
   const fsBtn = document.getElementById('modal-browser-fs');
   if (sizeBtn) sizeBtn.hidden = true;

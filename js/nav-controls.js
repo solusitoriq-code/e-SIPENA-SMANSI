@@ -289,8 +289,9 @@ function getUiSwipeDelta(startX, startY, endX, endY) {
  * @param {HTMLElement | null} el
  * @param {{ onNext: () => void, onPrev: () => void, isEnabled?: () => boolean }} options
  */
-export function bindHorizontalSwipe(el, { onNext, onPrev, isEnabled = () => true }) {
+export function bindHorizontalSwipe(el, { onNext, onPrev, isEnabled = () => true, dragTarget = null }) {
   if (!el) return;
+  const dragEl = dragTarget || el;
   let touchStart = null;
   let pointerStart = null;
   let suppressClickUntil = 0;
@@ -340,8 +341,8 @@ export function bindHorizontalSwipe(el, { onNext, onPrev, isEnabled = () => true
     const { uiDeltaX, uiDeltaY } = getUiSwipeDelta(pointerStart.x, pointerStart.y, event.clientX, event.clientY);
     if (Math.abs(uiDeltaX) > 10 && Math.abs(uiDeltaX) > Math.abs(uiDeltaY)) {
       pointerStart.moved = true;
-      el.classList.add('is-dragging');
-      el.style.transform = `translateX(${Math.max(-42, Math.min(42, uiDeltaX * 0.35))}px)`;
+      dragEl.classList.add('is-dragging');
+      dragEl.style.transform = `translateX(${Math.max(-42, Math.min(42, uiDeltaX * 0.35))}px)`;
     }
   });
 
@@ -349,8 +350,8 @@ export function bindHorizontalSwipe(el, { onNext, onPrev, isEnabled = () => true
     if (!pointerStart || event.pointerId !== pointerStart.id) return;
     const start = pointerStart;
     pointerStart = null;
-    el.classList.remove('is-dragging');
-    el.style.transform = '';
+    dragEl.classList.remove('is-dragging');
+    dragEl.style.transform = '';
     if (canceled) return;
     const swiped = evaluateSwipe(start.x, start.y, event.clientX, event.clientY, Date.now() - start.at, 40);
     if (swiped || start.moved) suppressClickUntil = Date.now() + 140;

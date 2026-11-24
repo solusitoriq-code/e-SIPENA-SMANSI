@@ -66,17 +66,16 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
     title: book.title || 'Detail Novel',
     wide: true,
     fullscreen: true,
+    headerTabsHtml: `
+      <button type="button" class="modal-hdr-tab${startSection === 'detail' ? ' is-active' : ''}" role="tab" aria-selected="${startSection === 'detail' ? 'true' : 'false'}" data-modal-pane="detail">Detail</button>
+      <button type="button" class="modal-hdr-tab${startSection === 'reader' ? ' is-active' : ''}" role="tab" aria-selected="${startSection === 'reader' ? 'true' : 'false'}" data-modal-pane="reader"${startSection === 'reader' ? ' data-autofocus' : ''}>Baca Buku</button>
+    `,
     onClose: () => {
       stopSpeech();
       readerController?.destroy();
     },
     html: `
       <div class="book-modal-shell">
-        <div class="book-modal-tabs" role="tablist" aria-label="Tampilan detail atau baca buku">
-          <button type="button" class="modal-subtab${startSection === 'detail' ? ' is-active' : ''}" data-modal-pane="detail">Detail</button>
-          <button type="button" class="modal-subtab${startSection === 'reader' ? ' is-active' : ''}" data-modal-pane="reader"${startSection === 'reader' ? ' data-autofocus' : ''}>Baca Buku</button>
-        </div>
-
         <section class="book-modal-pane${startSection === 'detail' ? ' is-active' : ''}" data-pane="detail" ${startSection === 'detail' ? '' : 'hidden'}>
           <div class="book-detail-grid">
             <div class="book-detail-cover-col">
@@ -172,22 +171,29 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
     }
   });
 
+  const dialogEl = document.getElementById('app-modal');
+  dialogEl?.classList.toggle('is-reading-mode', startSection === 'reader');
+
   const setActivePane = (paneName) => {
-    for (const btn of bodyEl.querySelectorAll('[data-modal-pane]')) {
-      btn.classList.toggle('is-active', btn.getAttribute('data-modal-pane') === paneName);
+    const scopeEl = dialogEl || bodyEl;
+    for (const btn of scopeEl.querySelectorAll('[data-modal-pane]')) {
+      const active = btn.getAttribute('data-modal-pane') === paneName;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
     }
     for (const pane of bodyEl.querySelectorAll('[data-pane]')) {
       const match = pane.getAttribute('data-pane') === paneName;
       pane.toggleAttribute('hidden', !match);
       pane.classList.toggle('is-active', match);
     }
+    dialogEl?.classList.toggle('is-reading-mode', paneName === 'reader');
     if (paneName === 'reader') {
       readerController.activateReader();
       window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
     }
   };
 
-  for (const btn of bodyEl.querySelectorAll('[data-modal-pane]')) {
+  for (const btn of (dialogEl || bodyEl).querySelectorAll('[data-modal-pane]')) {
     btn.addEventListener('click', () => { playSfx('click'); setActivePane(btn.getAttribute('data-modal-pane') || 'detail'); });
   }
   bodyEl.querySelector('#btn-switch-to-reader')?.addEventListener('click', () => { playSfx('pop'); setActivePane('reader'); });

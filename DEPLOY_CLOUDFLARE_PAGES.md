@@ -66,17 +66,18 @@ Thumbs.db
 ### Langkah B: Hubungkan Repositori di Dashboard Cloudflare
 1. Masuk ke [dash.cloudflare.com](https://dash.cloudflare.com).
 2. Di menu kiri, pilih **Workers & Pages** lalu klik **Create** (atau **Create application**).
-3. Pilih tab **Pages**, lalu klik **Connect to Git** (atau **Import an existing Git repository**).
-4. Otorisasi akun GitHub/GitLab dan pilih repositori **e-SIPENA SMAN 1 Sidayu**.
-5. Isi pengaturan build persis sebagai berikut:
+3. **PENTING — Pilih Pages, bukan Workers:** Pada halaman *Create application*, Cloudflare menampilkan kartu **Workers** di bagian atas. **Jangan** mengklik *Import a repository* di bagian Workers tersebut karena akan menjalankan `wrangler deploy` (Workers) dan gagal pada folder `functions/`.
+4. Gulir ke bagian **paling bawah** halaman *Create application*, lalu klik tautan **"Looking to deploy Pages? Get started"** (atau pilih tab **Pages > Import an existing Git repository**).
+5. Otorisasi akun GitHub/GitLab dan pilih repositori **e-SIPENA SMAN 1 Sidayu**.
+6. Isi pengaturan build persis sebagai berikut:
    - **Project name:** `esipena-smansi` *(menghasilkan alamat `https://esipena-smansi.pages.dev`)*
    - **Production branch:** `main`
    - **Framework preset:** `None`
    - **Build command:** *(biarkan kosong)*
    - **Build output directory:** `.` *(atau `/` untuk root proyek)*
    - **Environment variables:** *(tidak wajib ditambahkan karena kunci publik Supabase berada di `js/config.js`; jangan pernah memasukkan `service_role` key)*
-6. Klik **Save and Deploy**.
-7. Tunggu proses unggah selesai (~30–60 detik). Setelah status **Success**, klik URL `https://<nama-proyek>.pages.dev` untuk membuka aplikasi.
+7. Klik **Save and Deploy**.
+8. Tunggu proses unggah selesai (~30–60 detik). Setelah status **Success**, klik URL `https://<nama-proyek>.pages.dev` untuk membuka aplikasi.
 
 ---
 
@@ -163,6 +164,9 @@ Setelah deploy selesai, uji seluruh fungsi berikut pada URL produksi `https://..
 
 ## 7. Pemecahan Masalah Umum
 
+- **Galat `Automatic configuration cannot migrate Pages Functions to Workers yet` saat deploy Git:**
+  Artinya proyek terlanjur dibuat sebagai **Cloudflare Workers** (bukan **Cloudflare Pages**), sehingga sistem menjalankan `npx wrangler deploy` yang menolak kombinasi `functions/` dan berkas statis di root.
+  **Solusi:** Hapus proyek Workers yang gagal tersebut (*Settings > Delete*), buka **Workers & Pages > Create application**, gulir ke paling bawah, lalu klik **"Looking to deploy Pages? Get started"** untuk membuat proyek **Pages** yang benar.
 - **Deploy gagal karena file melebihi `25 MiB`:**
   Pastikan berkas mentah (`00. NASKAH FIX CETAK/`, `00. NASKAH GABUNGAN/`, `Kumpulan Cover - Antologi - QRCBN.pdf`, `*.pdf`, `*.docx`, `*.cdr`) tidak ikut masuk ke Git atau ke folder staging `dist-cf/`.
 - **Pembaca PDF gagal memuat dan kembali ke Mode Teks (`proxy-unavailable`):**
