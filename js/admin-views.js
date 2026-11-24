@@ -18,7 +18,7 @@ import {
 } from './data-service.js';
 import { getAdminStatusClass, openCurationModal } from './admin-curation-modal.js';
 import { renderCatalogManager } from './admin-catalog-views.js';
-import { escapeHtml, getRoleBadgeClass, showToast } from './ui-utils.js';
+import { createIcon, escapeHtml, getRoleBadgeClass, showToast } from './ui-utils.js';
 
 const adminUiState = {
   subTab: 'kurasi',
@@ -48,10 +48,13 @@ function renderLoginScreen(container) {
             <span>Surel Kurator / Pustakawan</span>
             <input id="adm-login-email" type="email" autocomplete="email" placeholder="pustakawan@sman1sidayu.sch.id" ${supabaseActive ? 'required' : ''}>
           </label>
-          <label class="form-field">
-            <span>Kata Sandi</span>
-            <input id="adm-login-password" type="password" autocomplete="current-password" placeholder="Masukkan kata sandi" ${supabaseActive ? 'required' : ''}>
-          </label>
+          <div class="form-field">
+            <label for="adm-login-password"><span>Kata Sandi</span></label>
+            <div class="password-field-wrap">
+              <input id="adm-login-password" type="password" autocomplete="current-password" placeholder="Masukkan kata sandi" ${supabaseActive ? 'required' : ''}>
+              <button type="button" id="btn-toggle-adm-password" class="password-toggle-btn" aria-label="Tampilkan kata sandi" aria-pressed="false" title="Tampilkan kata sandi">${createIcon('eye')}</button>
+            </div>
+          </div>
           <div class="admin-login-actions">
             <button type="submit" id="btn-adm-login" class="primary-btn">${supabaseActive ? 'Masuk Pengelola' : 'Masuk Mode Demo Lokal'}</button>
           </div>
@@ -59,6 +62,20 @@ function renderLoginScreen(container) {
       </section>
     </div>
   `;
+
+  const passInput = container.querySelector('#adm-login-password');
+  const togglePassBtn = container.querySelector('#btn-toggle-adm-password');
+  togglePassBtn?.addEventListener('click', () => {
+    if (!(passInput instanceof HTMLInputElement)) return;
+    const isHidden = passInput.type === 'password';
+    passInput.type = isHidden ? 'text' : 'password';
+    togglePassBtn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+    const label = isHidden ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi';
+    togglePassBtn.setAttribute('aria-label', label);
+    togglePassBtn.setAttribute('title', label);
+    togglePassBtn.innerHTML = createIcon(isHidden ? 'eyeOff' : 'eye');
+    playSfx('click');
+  });
 
   container.querySelector('#admin-login-form')?.addEventListener('submit', async (event) => {
     event.preventDefault();
