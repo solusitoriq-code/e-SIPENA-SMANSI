@@ -1,11 +1,12 @@
 # Panduan Setup Google Apps Script Upload PDF & Sampul e-SIPENA
 
-Skrip [UploadDrive.gs](./UploadDrive.gs) berfungsi sebagai endpoint Web App untuk mengunggah naskah **PDF Kirim Karya (maks. 3 MB)**, **PDF Buku Katalog Kurator (maks. 16 MB)**, dan **Sampul Buku WebP/PNG/JPEG (maks. 1 MB)** ke **1 folder induk Google Drive**, yang otomatis dipilah ke dalam subfolder terpisah sehingga pemakaian Supabase Storage tetap **0 MB**.
+Skrip [UploadDrive.gs](./UploadDrive.gs) berfungsi sebagai endpoint Web App untuk mengunggah naskah **PDF Kirim Karya (maks. 3 MB)**, **PDF Buku Katalog Kurator (maks. 16 MB)**, **Sampul Buku WebP/PNG/JPEG (maks. 1 MB)**, dan **Foto Kegiatan Sudut Pustakawan (maks. 1 MB)** ke **1 folder induk Google Drive**, yang otomatis dipilah ke dalam subfolder terpisah sehingga pemakaian Supabase Storage tetap **0 MB**.
 
 ## Struktur Subfolder Otomatis (1 Folder Induk)
 
 Cukup sediakan **1 ID Folder Induk (`TARGET_FOLDER_ID`)**, skrip akan otomatis membuat dan memilah unggahan ke subfolder berikut:
 - `covers/` — sampul buku hasil konversi `.webp` dari Ruang Pengelola (maks. 1 MB)
+- `kegiatan/` — foto dokumentasi kegiatan Sudut Pustakawan hasil konversi `.webp` (maks. 1 MB per foto)
 - `naskah-pdf/` — kiriman naskah PDF warga sekolah dari form Kirim Karya (maks. 3 MB)
 - `novel-pdf/` — PDF buku/novel katalog yang diunggah kurator dari Ruang Pengelola (maks. 16 MB)
 
@@ -42,12 +43,12 @@ Cukup sediakan **1 ID Folder Induk (`TARGET_FOLDER_ID`)**, skrip akan otomatis m
   "base64Data": "JVBERi0xLjQK..."
 }
 ```
-- Untuk Sampul WebP (`subFolder`: `'covers'`, maks. 1 MB):
+- Untuk Sampul WebP (`subFolder`: `'covers'`, maks. 1 MB) atau Foto Kegiatan (`uploadKind`: `'activity-photo'`, `subFolder`: `'kegiatan'`, maks. 1 MB):
 ```json
 {
-  "uploadKind": "cover",
-  "subFolder": "covers",
-  "fileName": "sampul-novel.webp",
+  "uploadKind": "activity-photo",
+  "subFolder": "kegiatan",
+  "fileName": "bedah-buku-sman1-sidayu.webp",
   "mimeType": "image/webp",
   "base64Data": "UklGR..."
 }
@@ -76,6 +77,6 @@ Cukup sediakan **1 ID Folder Induk (`TARGET_FOLDER_ID`)**, skrip akan otomatis m
 - Folder `google-apps-script/` dikecualikan dari unggahan deploy Cloudflare Pages lewat `../.cfignore` karena skrip ini dijalankan di Google Apps Script (`https://script.google.com`).
 
 ### Validasi Keamanan Sisi Server
-- Subfolder PDF hanya mengizinkan `naskah-pdf` atau `novel-pdf` (selain itu diarahkan ke `naskah-pdf`), dan sampul selalu masuk ke `covers`, dilindungi `LockService` agar tidak terjadi subfolder ganda.
+- Subfolder PDF hanya mengizinkan `naskah-pdf` atau `novel-pdf` (selain itu diarahkan ke `naskah-pdf`), dan gambar hanya mengizinkan `covers` atau `kegiatan`, dilindungi `LockService` agar tidak terjadi subfolder ganda.
 - Jalur PDF memvalidasi ekstensi `.pdf`, MIME `application/pdf`, header magic bytes `%PDF-`, serta batas maks. `3.145.728` byte (3 MiB) untuk `naskah-pdf/` dan `16.777.216` byte (16 MiB) untuk `novel-pdf/`.
-- Jalur Cover memvalidasi magic bytes `RIFF....WEBP`, PNG, atau JPEG serta batas maks. `1.048.576` byte (1 MiB).
+- Jalur Gambar (`covers` & `kegiatan`) memvalidasi magic bytes `RIFF....WEBP`, PNG, atau JPEG serta batas maks. `1.048.576` byte (1 MiB).

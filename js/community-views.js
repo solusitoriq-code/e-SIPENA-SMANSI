@@ -5,7 +5,9 @@
 
 import { APP_CONFIG } from './config.js';
 import { playSfx, stopSpeech } from './audio.js';
+import { openLibrarianActivityDetailModal } from './activity-modal.js';
 import { createBookReaderController } from './book-reader-ui.js';
+import { normalizeActivityPhotos } from './data-service.js';
 import { openModel3dModal } from './model-3d-modal.js';
 import {
   bindSpeechToggleButton,
@@ -252,76 +254,80 @@ export function renderMadingPanel(
   };
 }
 
-function openLibrarianDocModal(doc, contactAdmin) {
-  const hasExternalUrl = /^https?:\/\//i.test(String(doc?.url || '').trim());
-  const waUrl = buildWhatsAppUrl(contactAdmin, `saya ingin menanyakan panduan "${doc?.title || 'Sudut Pustakawan'}".`);
-
-  openModal({
-    title: doc?.title || 'Dokumen Panduan Literasi',
-    html: `
-      <div class="librarian-modal-wrap">
-        <div class="mading-modal-badges">
-          <span class="panel-badge">${escapeHtml(doc?.category || 'Panduan')}</span>
-          <span class="panel-badge">${escapeHtml(doc?.updated_label || 'Edisi 2026')}</span>
-        </div>
-        <p class="librarian-modal-summary">${escapeHtml(doc?.summary || '')}</p>
-        <div class="librarian-guide-notes">
-          <h3>Ketentuan Praktis Warga SMAN 1 Sidayu</h3>
-          <ul>
-            <li>Naskah dikirim melalui menu <strong>Mading Digital &rarr; Ajukan Karya</strong> dalam format <strong>PDF maksimal 3 MB</strong> tanpa perlu login.</li>
-            <li>Karya harus orisinal warga sekolah (Siswa X-XII, Guru, maupun Tendik) dan bebas dari salin-tempel tanpa sumber.</li>
-            <li>Setiap naskah mendapat Kode Lacak <code>SPN-XXXXXX</code> untuk memantau hasil kurasi Pustakawan dan Tim NLC.</li>
-          </ul>
-        </div>
-        <div class="librarian-modal-actions">
-          ${hasExternalUrl ? `<a class="primary-btn inline-action-btn" href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer">${createIcon('external')}<span>Buka Dokumen</span></a>` : ''}
-          <a class="secondary-btn inline-action-btn" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('whatsapp')}<span>Tanya Pustakawan via WA</span></a>
-        </div>
-      </div>
-    `
-  });
-}
+const FALLBACK_ACTIVITY_PHOTO = 'assets/images/logo-smansi.webp';
 
 /**
- * Merender panel Sudut Pustakawan berisi dokumen panduan literasi, alur kurasi,
- * etika anti-plagiat, arsip 23 buku 2025, serta kontak resmi admin perpustakaan.
+ * Merender panel Sudut Pustakawan berisi dokumentasi kegiatan perpustakaan multi-foto
+ * serta kontak resmi admin perpustakaan.
  * @param {HTMLElement | null} container
- * @param {{ siteSettings?: Record<string, any> }} [options]
+ * @param {{ siteSettings?: Record<string, any>, activities?: any[] }} [options]
  */
-export function renderLibrarianPanel(container, { siteSettings = {} } = {}) {
+export function renderLibrarianPanel(container, { siteSettings = {}, activities = [] } = {}) {
   if (!container) return;
   const school = siteSettings.school_profile || {};
   const kpi = siteSettings.kpi_stats || {};
   const contact = siteSettings.contact_admin || {};
   const corner = siteSettings.librarian_corner || {};
-  const docs = Array.isArray(corner.documents) ? corner.documents : [];
-  const waUrl = buildWhatsAppUrl(contact, 'saya ingin berkonsultasi mengenai layanan perpustakaan dan pengiriman karya literasi.');
+  const serviceHours = corner.service_hours || 'Senin - Jumat, 07.00 - 15.00 WIB';
+  const waUrl = buildWhatsAppUrl(contact, 'saya ingin berkonsultasi mengenai layanan perpustakaan dan kegiatan literasi.');
+
+  const panelBadge = document.querySelector('#panel-pustakawan .panel-header .panel-badge');
+  if (panelBadge) panelBadge.textContent = serviceHours;
+
+  const cardsHtml = activities.length
+    ? activities
+      .map((act) => {
+        const photos = normalizeActivityPhotos(act.photos);
+        const coverUrl = photos[0]?.url || FALLBACK_ACTIVITY_PHOTO;
+        const extraThumbs = photos.slice(1, 4);
+        const desc = String(act.description || '').trim();
+        return `
+            <article class="librarian-doc-card librarian-activity-card" data-activity-id="${escapeHtml(act.id)}" data-nav-card="true">
+              <div class="librarian-activity-media" data-action="open-activity" data-activity-id="${escapeHtml(act.id)}">
+                <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${FALLBACK_ACTIVITY_PHOTO}'">
+                <span class="librarian-photo-badge">${createIcon('camera')}<span>${Math.max(1, photos.length)} Foto</span></span>
+              </div>
+              ${extraThumbs.length
+            ? `
+                    <div class="librarian-mini-strip" aria-hidden="true">
+                      ${extraThumbs
+              .map(
+                (thumb) =>
+                  `<img src="${escapeHtml(thumb.url)}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${FALLBACK_ACTIVITY_PHOTO}'">`
+              )
+              .join('')}
+                      ${photos.length > 4 ? `<span class="librarian-mini-more">+${photos.length - 4}</span>` : ''}
+                    </div>
+                  `
+            : ''
+          }
+              <h3 class="librarian-doc-title">${escapeHtml(act.title)}</h3>
+              ${desc ? `<p class="librarian-doc-summary">${escapeHtml(desc)}</p>` : ''}
+              <div class="librarian-doc-actions">
+                <button type="button" class="secondary-btn inline-action-btn" data-action="open-activity" data-activity-id="${escapeHtml(act.id)}">${createIcon('camera')}<span>${photos.length > 1 ? `Lihat ${photos.length} Foto` : 'Lihat Foto'}</span></button>
+              </div>
+            </article>
+          `;
+      })
+      .join('')
+    : `
+      <article class="empty-stage-note librarian-empty-card">
+        <h3>Belum Ada Kegiatan Terpublikasi</h3>
+        <p>Dokumentasi kegiatan literasi dan perpustakaan akan ditampilkan di sini setelah ditambahkan oleh pengelola.</p>
+      </article>
+    `;
 
   container.innerHTML = `
     <div class="librarian-layout">
       <div class="librarian-docs-grid">
-        ${docs
-      .map((doc) => `
-            <article class="librarian-doc-card" data-doc-id="${escapeHtml(doc.id)}" data-nav-card="true">
-              <div class="librarian-doc-top">
-                <span class="panel-badge">${escapeHtml(doc.category || 'Panduan')}</span>
-                <span class="doc-updated">${escapeHtml(doc.updated_label || '')}</span>
-              </div>
-              <h3 class="librarian-doc-title">${escapeHtml(doc.title)}</h3>
-              <p class="librarian-doc-summary">${escapeHtml(doc.summary || '')}</p>
-              <div class="librarian-doc-actions">
-                <button type="button" class="secondary-btn inline-action-btn" data-action="open-doc" data-doc-id="${escapeHtml(doc.id)}">${createIcon('book')}<span>Baca Panduan</span></button>
-              </div>
-            </article>
-          `)
-      .join('')}
+        ${cardsHtml}
       </div>
       <aside class="librarian-sidebar">
         <section class="librarian-info-card">
           <h3>${escapeHtml(school.library_name || APP_CONFIG.SCHOOL_DEFAULTS.libraryName)}</h3>
           <p class="librarian-community">${escapeHtml(school.community_name || APP_CONFIG.SCHOOL_DEFAULTS.communityName)}</p>
           <dl class="librarian-dl">
-            <div><dt>Jam Layanan</dt><dd>${escapeHtml(corner.service_hours || 'Senin - Jumat, 07.00 - 15.00 WIB')}</dd></div>
+            <div><dt>Jam Layanan</dt><dd>${escapeHtml(serviceHours)}</dd></div>
             <div><dt>Alamat</dt><dd>${escapeHtml(school.address || 'Jl. Kanjeng Pangeran No. 1, Sidayu, Gresik')}</dd></div>
             <div><dt>Surel Resmi</dt><dd>${escapeHtml(contact.email || 'perpustakaan@sman1sidayu.sch.id')}</dd></div>
             <div><dt>Rekam Jejak 2025</dt><dd><strong>${escapeHtml(kpi.books_2025_count ?? 23)} Buku Karya 2025</strong> menjadi fondasi lahirnya <strong>${escapeHtml(kpi.novels_2026_count ?? 12)} Novel 2026</strong>.</dd></div>
@@ -333,12 +339,12 @@ export function renderLibrarianPanel(container, { siteSettings = {} } = {}) {
   `;
 
   container.onclick = (event) => {
-    const btn = event.target instanceof HTMLElement ? event.target.closest('[data-action="open-doc"]') : null;
+    const btn = event.target instanceof HTMLElement ? event.target.closest('[data-action="open-activity"]') : null;
     if (!(btn instanceof HTMLElement)) return;
-    const doc = docs.find((d) => String(d.id) === btn.dataset.docId);
-    if (doc) {
+    const act = activities.find((a) => String(a.id) === btn.dataset.activityId);
+    if (act) {
       playSfx('pop');
-      openLibrarianDocModal(doc, contact);
+      openLibrarianActivityDetailModal(act, contact);
     }
   };
 }

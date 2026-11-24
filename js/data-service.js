@@ -5,6 +5,7 @@
  */
 
 import { APP_CONFIG, isSupabaseConfigured } from './config.js';
+import { normalizeActivityRecord } from './admin-activity-service.js';
 import {
   SafeStorage,
   applyDemoOverridesToDataset,
@@ -49,7 +50,18 @@ export {
   bookRequiresNovelDetails,
   bookRequiresSynopsis
 } from './admin-service.js';
-export { compressCoverToWebp, uploadCoverImageToGDrive } from './media-upload.js';
+export {
+  adminCreateActivity,
+  adminDeleteActivity,
+  adminListAllActivities,
+  adminSaveActivity,
+  normalizeActivityPhotos
+} from './admin-activity-service.js';
+export {
+  compressCoverToWebp,
+  uploadActivityPhotoToGDrive,
+  uploadCoverImageToGDrive
+} from './media-upload.js';
 
 const LOCAL_LIKE_DELTAS_KEY = 'esipena_local_like_deltas';
 const CACHED_SNAPSHOT_KEY = 'esipena_cached_snapshot';
@@ -59,6 +71,7 @@ const portalState = {
   source: 'local',
   books: [],
   models3d: [],
+  librarianActivities: [],
   madingWorks: [],
   siteSettings: {}
 };
@@ -133,6 +146,7 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
   let localData = {
     books: [],
     models_3d: [],
+    librarian_activities: [],
     public_mading_works: [],
     site_settings: {}
   };
@@ -159,6 +173,12 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
       : Array.isArray(localData.models_3d)
         ? localData.models_3d
         : [];
+  let librarianActivities =
+    useCachedRemote && Array.isArray(cachedRemote.librarianActivities)
+      ? cachedRemote.librarianActivities
+      : Array.isArray(localData.librarian_activities)
+        ? localData.librarian_activities
+        : [];
   let madingWorks =
     useCachedRemote && Array.isArray(cachedRemote.madingWorks)
       ? cachedRemote.madingWorks
@@ -176,9 +196,10 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
     isSupabaseConfigured() && (typeof navigator === 'undefined' || navigator.onLine !== false);
 
   if (canTrySupabase) {
-    const [booksRes, modelsRes, madingRes, settingsRes] = await Promise.allSettled([
+    const [booksRes, modelsRes, activitiesRes, madingRes, settingsRes] = await Promise.allSettled([
       fetchSupabaseJson('/rest/v1/books?select=*&is_published=eq.true&order=sort_order.asc,title.asc'),
       fetchSupabaseJson('/rest/v1/models_3d?select=*&is_active=eq.true&order=sort_order.asc'),
+      fetchSupabaseJson('/rest/v1/librarian_activities?select=*&is_active=eq.true&order=sort_order.asc,created_at.desc'),
       fetchSupabaseJson('/rest/v1/public_mading_works?select=*&order=published_at.desc'),
       fetchSupabaseJson('/rest/v1/site_settings?select=key,value,description,is_placeholder&is_public=eq.true')
     ]);
@@ -194,6 +215,10 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
       models3d = modelsRes.value;
       source = 'supabase';
     }
+    if (activitiesRes.status === 'fulfilled' && Array.isArray(activitiesRes.value)) {
+      librarianActivities = activitiesRes.value.map(normalizeActivityRecord);
+      source = 'supabase';
+    }
     if (madingRes.status === 'fulfilled' && Array.isArray(madingRes.value)) {
       madingWorks = madingRes.value;
       source = 'supabase';
@@ -207,6 +232,7 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
       SafeStorage.setJson(CACHED_SNAPSHOT_KEY, {
         books,
         models3d,
+        librarianActivities,
         madingWorks,
         siteSettings
       });
@@ -217,12 +243,14 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
     const demoPatched = applyDemoOverridesToDataset({
       books: applyLocalLikeDeltas(books),
       models3d,
+      librarianActivities,
       madingWorks,
       localSubmissions: getLocalSubmissions(),
       siteSettings
     });
     books = demoPatched.books;
     models3d = demoPatched.models3d;
+    librarianActivities = demoPatched.librarianActivities.map(normalizeActivityRecord);
     madingWorks = demoPatched.madingWorks;
     siteSettings = demoPatched.siteSettings;
   }
@@ -231,6 +259,9 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
   portalState.source = source;
   portalState.books = [...books].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
   portalState.models3d = [...models3d].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  portalState.librarianActivities = [...librarianActivities]
+    .map(normalizeActivityRecord)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
   portalState.madingWorks = [...madingWorks];
   portalState.siteSettings = siteSettings;
 
@@ -239,13 +270,14 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
 
 /**
  * Mengembalikan salinan snapshot state data portal saat ini.
- * @returns {{ source: string, books: any[], models3d: any[], madingWorks: any[], siteSettings: Record<string, any> }}
+ * @returns {{ source: string, books: any[], models3d: any[], librarianActivities: any[], madingWorks: any[], siteSettings: Record<string, any> }}
  */
 export function getPortalSnapshot() {
   return {
     source: portalState.source,
     books: portalState.books,
     models3d: portalState.models3d,
+    librarianActivities: portalState.librarianActivities,
     madingWorks: portalState.madingWorks,
     siteSettings: portalState.siteSettings
   };

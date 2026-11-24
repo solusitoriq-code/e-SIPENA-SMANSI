@@ -28,43 +28,8 @@
       "is_placeholder": true
     },
     "librarian_corner": {
-      "headline": "Sudut Pustakawan & Panduan Literasi",
-      "service_hours": "Senin - Jumat, 07.00 - 15.00 WIB",
-      "is_placeholder": true,
-      "documents": [
-        {
-          "id": "doc-pedoman-karya",
-          "title": "Pedoman Penulisan & Unggah PDF (Maks. 3 MB)",
-          "category": "Panduan Penulis",
-          "summary": "Tata cara menyusun naskah cerpen, puisi, resensi, dan esai budaya dalam format PDF siap kurasi.",
-          "url": "",
-          "updated_label": "Edisi 2026 (Placeholder)"
-        },
-        {
-          "id": "doc-anti-plagiat",
-          "title": "Etika Anti-Plagiasi & Orisinalitas Karya Warga Sekolah",
-          "category": "Kode Etik",
-          "summary": "Ketentuan keaslian naskah tanpa salin-tempel maupun penggunaan teks AI tanpa penyuntingan kreatif.",
-          "url": "",
-          "updated_label": "Edisi 2026 (Placeholder)"
-        },
-        {
-          "id": "doc-alur-kurasi",
-          "title": "Alur Kurasi Mading Digital Warga Sekolah",
-          "category": "Kurasi NLC",
-          "summary": "Tahapan pemeriksaan oleh Tim Pustakawan & Guru Pembina dari Menunggu Kurasi hingga Lolos Mading.",
-          "url": "",
-          "updated_label": "Edisi 2026 (Placeholder)"
-        },
-        {
-          "id": "doc-katalog-2025",
-          "title": "Rekam Jejak Program 23 Buku Karya 2025",
-          "category": "Arsip Program",
-          "summary": "Ringkasan capaian 23 buku tahun 2025 yang menjadi fondasi lahirnya 12 Novel SMAN 1 Sidayu 2026.",
-          "url": "",
-          "updated_label": "Arsip 2025 (Placeholder)"
-        }
-      ]
+      "headline": "Sudut Pustakawan & Kegiatan Literasi",
+      "service_hours": "Senin - Jumat, 07.00 - 15.00 WIB"
     },
     "portal_links": {
       "portal_url": "https://esipena-smansi.pages.dev",
@@ -353,5 +318,6 @@
       "is_active": true
     }
   ],
-  "public_mading_works": []
+  "public_mading_works": [],
+  "librarian_activities": []
 }

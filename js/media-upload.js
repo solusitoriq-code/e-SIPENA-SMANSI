@@ -1,7 +1,8 @@
 /**
- * Utilitas Kompresi & Unggah Sampul Buku WebP — e-SIPENA SMAN 1 Sidayu
- * Mengubah gambar (JPG/PNG/WebP) menjadi WebP rasio sampul 296x420 terkompresi di browser,
- * mengunggah ke Google Drive (jika UploadDrive.gs mendukung gambar), atau memakai Data URL WebP ringan.
+ * Utilitas Kompresi & Unggah Gambar WebP — e-SIPENA SMAN 1 Sidayu
+ * Mengompres sampul buku (296x420 -> covers/) dan foto dokumentasi kegiatan
+ * (rasio asli maks. 1280px -> kegiatan/) ke WebP, lalu mengunggah ke Google Drive
+ * melalui UploadDrive.gs dengan fallback Data URL WebP aman saat luring.
  */
 
 import { APP_CONFIG, isGDriveUploadConfigured } from './config.js';
@@ -10,6 +11,7 @@ import { uploadPdfToGDrive } from './submission-service.js';
 
 const COVER_WIDTH = 296;
 const COVER_HEIGHT = 420;
+const ACTIVITY_MAX_DIMENSION = 1280;
 const MAX_INPUT_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MiB sebelum kompresi
 
 function loadImageElement(file) {
@@ -28,17 +30,15 @@ function loadImageElement(file) {
   });
 }
 
-/**
- * Mengompres berkas gambar apa pun (JPG/PNG/WebP) menjadi data URL WebP 296x420 (< ~90 KB).
- * @param {File} file
- * @returns {Promise<{ dataUrl: string, base64Data: string, mimeType: string, sizeBytes: number }>}
- */
-export async function compressCoverToWebp(file) {
+async function compressImageToWebp(
+  file,
+  { coverCrop = false, width = COVER_WIDTH, height = COVER_HEIGHT, maxDimension = ACTIVITY_MAX_DIMENSION, maxDataUrlLen = 140000, minQuality = 0.45 } = {}
+) {
   if (!file || typeof file.name !== 'string') {
     throw new Error('Pilih berkas gambar terlebih dahulu.');
   }
   if (!/^image\/(webp|png|jpeg|jpg)$/i.test(String(file.type || '')) && !/\.(webp|png|jpe?g)$/i.test(file.name)) {
-    throw new Error('Format sampul harus gambar WebP, PNG, atau JPG/JPEG.');
+    throw new Error('Format gambar harus WebP, PNG, atau JPG/JPEG.');
   }
   if (file.size > MAX_INPUT_IMAGE_BYTES) {
     throw new Error('Ukuran gambar awal maksimal 10 MB.');
@@ -46,36 +46,45 @@ export async function compressCoverToWebp(file) {
 
   const img = await loadImageElement(file);
   const canvas = document.createElement('canvas');
-  canvas.width = COVER_WIDTH;
-  canvas.height = COVER_HEIGHT;
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     throw new Error('Peramban tidak mendukung kompresi kanvas.');
   }
 
-  ctx.fillStyle = '#0f294a';
-  ctx.fillRect(0, 0, COVER_WIDTH, COVER_HEIGHT);
+  if (coverCrop) {
+    canvas.width = width;
+    canvas.height = height;
+    ctx.fillStyle = '#0f294a';
+    ctx.fillRect(0, 0, width, height);
 
-  const srcRatio = img.naturalWidth / Math.max(1, img.naturalHeight);
-  const dstRatio = COVER_WIDTH / COVER_HEIGHT;
-  let drawW = COVER_WIDTH;
-  let drawH = COVER_HEIGHT;
-  let offsetX = 0;
-  let offsetY = 0;
-  if (srcRatio > dstRatio) {
-    drawW = COVER_HEIGHT * srcRatio;
-    offsetX = (COVER_WIDTH - drawW) / 2;
+    const srcRatio = img.naturalWidth / Math.max(1, img.naturalHeight);
+    const dstRatio = width / height;
+    let drawW = width;
+    let drawH = height;
+    let offsetX = 0;
+    let offsetY = 0;
+    if (srcRatio > dstRatio) {
+      drawW = height * srcRatio;
+      offsetX = (width - drawW) / 2;
+    } else {
+      drawH = width / srcRatio;
+      offsetY = (height - drawH) / 2;
+    }
+    ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
   } else {
-    drawH = COVER_WIDTH / srcRatio;
-    offsetY = (COVER_HEIGHT - drawH) / 2;
+    const longest = Math.max(1, img.naturalWidth, img.naturalHeight);
+    const scale = Math.min(1, maxDimension / longest);
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   }
-  ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
 
-  let quality = 0.82;
+  let quality = 0.84;
   let dataUrl = canvas.toDataURL('image/webp', quality);
-  while (dataUrl.length > 140000 && quality > 0.45) {
-    quality -= 0.12;
+  while (dataUrl.length > maxDataUrlLen && quality > minQuality) {
+    quality = Math.max(minQuality, quality - 0.1);
     dataUrl = canvas.toDataURL('image/webp', quality);
+    if (quality === minQuality) break;
   }
 
   const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/i);
@@ -87,21 +96,48 @@ export async function compressCoverToWebp(file) {
 }
 
 /**
- * Mengompres gambar ke WebP dan mengunggah ke Google Drive via UploadDrive.gs bila mendukung,
- * dengan fallback aman ke Data URL WebP terkompresi bila offline atau Apps Script belum diperbarui.
+ * Mengompres berkas gambar apa pun (JPG/PNG/WebP) menjadi data URL WebP 296x420 (< ~90 KB).
  * @param {File} file
+ * @returns {Promise<{ dataUrl: string, base64Data: string, mimeType: string, sizeBytes: number }>}
  */
-export async function uploadCoverImageToGDrive(file) {
-  const compressed = await compressCoverToWebp(file);
+export async function compressCoverToWebp(file) {
+  return compressImageToWebp(file, {
+    coverCrop: true,
+    width: COVER_WIDTH,
+    height: COVER_HEIGHT,
+    maxDataUrlLen: 140000,
+    minQuality: 0.45
+  });
+}
+
+/**
+ * Mengompres foto kegiatan Sudut Pustakawan menjadi WebP dengan rasio asli terjaga (maks. 1280px).
+ * @param {File} file
+ * @returns {Promise<{ dataUrl: string, base64Data: string, mimeType: string, sizeBytes: number }>}
+ */
+export async function compressActivityPhotoToWebp(file) {
+  return compressImageToWebp(file, {
+    coverCrop: false,
+    maxDimension: ACTIVITY_MAX_DIMENSION,
+    maxDataUrlLen: 460000,
+    minQuality: 0.5
+  });
+}
+
+async function uploadImageAssetToGDrive(
+  file,
+  { uploadKind, subFolder, compressFn, thumbSize, offlineMsg, staleMsg, errorMsg }
+) {
+  const compressed = await compressFn(file);
   const ext = compressed.mimeType === 'image/png' ? '.png' : '.webp';
   const uploadName = file.name.replace(/\.[^.]+$/, '') + ext;
 
   const buildEmbeddedFallback = (warning) => ({
     success: true,
     source: 'embedded-webp',
-    coverUrl: compressed.dataUrl,
+    url: compressed.dataUrl,
     fileId: '',
-    folderName: 'covers',
+    folderName: subFolder,
     sizeBytes: compressed.sizeBytes,
     warning
   });
@@ -112,7 +148,7 @@ export async function uploadCoverImageToGDrive(file) {
     (typeof navigator === 'undefined' || navigator.onLine !== false);
 
   if (!canUpload) {
-    return buildEmbeddedFallback('Sampul dikompres ke WebP dan disematkan langsung (mode luring/tanpa Drive).');
+    return buildEmbeddedFallback(offlineMsg);
   }
 
   try {
@@ -122,8 +158,8 @@ export async function uploadCoverImageToGDrive(file) {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
-          uploadKind: 'cover',
-          subFolder: 'covers',
+          uploadKind,
+          subFolder,
           fileName: uploadName,
           mimeType: compressed.mimeType,
           base64Data: compressed.base64Data
@@ -134,25 +170,62 @@ export async function uploadCoverImageToGDrive(file) {
 
     const data = await response.json().catch(() => null);
     if (response.ok && data && data.success && (data.thumbnailUrl || data.fileId)) {
-      const coverUrl =
-        data.thumbnailUrl || `https://drive.google.com/thumbnail?id=${encodeURIComponent(data.fileId)}&sz=w800`;
+      const actualFolder = String(data.folderName || subFolder);
+      const url =
+        data.thumbnailUrl ||
+        `https://drive.google.com/thumbnail?id=${encodeURIComponent(data.fileId)}&sz=${thumbSize}`;
+      const folderMismatchWarn =
+        actualFolder !== subFolder
+          ? `UploadDrive.gs masih versi lama (foto masuk ke ${actualFolder}/); deploy ulang skrip untuk subfolder ${subFolder}/.`
+          : '';
       return {
         success: true,
         source: 'gdrive',
-        coverUrl,
+        url,
         fileId: String(data.fileId || ''),
-        folderName: String(data.folderName || 'covers'),
+        folderName: actualFolder,
         sizeBytes: Number(data.sizeBytes || compressed.sizeBytes),
-        warning: ''
+        warning: folderMismatchWarn
       };
     }
 
-    return buildEmbeddedFallback(
-      'Endpoint UploadDrive.gs belum diperbarui untuk sampul; WebP terkompresi disematkan langsung.'
-    );
+    return buildEmbeddedFallback(staleMsg);
   } catch {
-    return buildEmbeddedFallback('Gagal menghubungi Drive; gambar sampul terkompresi disematkan langsung.');
+    return buildEmbeddedFallback(errorMsg);
   }
+}
+
+/**
+ * Mengompres sampul buku ke WebP dan mengunggah ke Google Drive subfolder covers/.
+ * @param {File} file
+ */
+export async function uploadCoverImageToGDrive(file) {
+  const res = await uploadImageAssetToGDrive(file, {
+    uploadKind: 'cover',
+    subFolder: 'covers',
+    compressFn: compressCoverToWebp,
+    thumbSize: 'w800',
+    offlineMsg: 'Sampul dikompres ke WebP dan disematkan langsung (mode luring/tanpa Drive).',
+    staleMsg: 'Endpoint UploadDrive.gs belum diperbarui untuk sampul; WebP terkompresi disematkan langsung.',
+    errorMsg: 'Gagal menghubungi Drive; gambar sampul terkompresi disematkan langsung.'
+  });
+  return { ...res, coverUrl: res.url };
+}
+
+/**
+ * Mengompres foto kegiatan ke WebP dan mengunggah ke Google Drive subfolder kegiatan/.
+ * @param {File} file
+ */
+export async function uploadActivityPhotoToGDrive(file) {
+  return uploadImageAssetToGDrive(file, {
+    uploadKind: 'activity-photo',
+    subFolder: 'kegiatan',
+    compressFn: compressActivityPhotoToWebp,
+    thumbSize: 'w1200',
+    offlineMsg: 'Foto dikompres ke WebP dan disematkan langsung (mode luring/tanpa Drive).',
+    staleMsg: 'Endpoint UploadDrive.gs gagal merespons; foto WebP disematkan langsung.',
+    errorMsg: 'Gagal menghubungi Drive; foto kegiatan terkompresi disematkan langsung.'
+  });
 }
 
 /**

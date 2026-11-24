@@ -43,9 +43,9 @@ npm run check
 ## 2. Setup Backend Supabase (Free Tier)
 
 1. Buat proyek baru di [Supabase](https://supabase.com).
-2. Buka menu **SQL Editor**, jalankan isi [supabase/schema.sql](supabase/schema.sql) untuk membuat 4 tabel (`books`, `submissions`, `culture_prompts`, `site_settings`), view publik `public_mading_works`, kebijakan **RLS** ketat, serta RPC `track_submission(p_tracking_code)` dan `increment_book_like(p_book_id)`.
-3. *(Opsional / Migrasi DB Lama)* Jika proyek Supabase berasal dari skema lama, jalankan [supabase/migration_drop_books_excerpt.sql](supabase/migration_drop_books_excerpt.sql) untuk menghapus kolom `excerpt` pada `public.books` serta [supabase/migration_reset_submissions_remove_antologi.sql](supabase/migration_reset_submissions_remove_antologi.sql) untuk mengosongkan data naskah `public.submissions` dan menghapus status `Masuk Antologi` (`NOTIFY pgrst, 'reload schema'`).
-4. Jalankan isi [supabase/seed.sql](supabase/seed.sql) di **SQL Editor** untuk mengisi data awal 12 Novel 2026, 5 topik *Jejak Budaya Gresik* (placeholder), dan `site_settings` (data naskah kurasi dimulai kosong).
+2. Buka menu **SQL Editor**, jalankan isi [supabase/schema.sql](supabase/schema.sql) untuk membuat 5 tabel (`books`, `submissions`, `models_3d`, `site_settings`, `librarian_activities`), view publik `public_mading_works`, kebijakan **RLS** ketat, serta RPC `track_submission(p_tracking_code)` dan `increment_book_like(p_book_id)`.
+3. *(Opsional / Migrasi DB Lama)* Jika proyek Supabase berasal dari skema lama, jalankan skrip migrasi yang sesuai di folder `supabase/`: [supabase/migration_drop_books_excerpt.sql](supabase/migration_drop_books_excerpt.sql), [supabase/migration_reset_submissions_remove_antologi.sql](supabase/migration_reset_submissions_remove_antologi.sql), [supabase/migration_models_3d.sql](supabase/migration_models_3d.sql), serta [supabase/migration_librarian_activities.sql](supabase/migration_librarian_activities.sql) untuk fitur Kegiatan Sudut Pustakawan.
+4. Jalankan isi [supabase/seed.sql](supabase/seed.sql) di **SQL Editor** untuk mengisi data awal 12 Novel 2026, koleksi *Pameran 3D Gresik*, dan `site_settings` (data naskah kurasi & kegiatan dimulai kosong).
 5. Buka **Authentication > Users** dan buat minimal satu akun email & kata sandi untuk Guru/Pustakawan (kurator).
 6. Buka **Project Settings > API**, salin **Project URL** dan **anon / publishable public key**, lalu pasang pada `SUPABASE_URL` dan `SUPABASE_ANON_KEY` di [js/config.js](js/config.js). **Jangan pernah** menaruh `service_role key` atau kata sandi admin di berkas frontend.
 
@@ -57,8 +57,9 @@ Seluruh berkas PDF dan sampul unggahan disimpan di Google Drive (pemakaian **Sup
 
 1. Buat satu folder induk di Google Drive akun pengelola perpustakaan/NLC (misalnya `eSIPENA-Drive-SMANSI`) dan salin **Folder ID** dari URL folder (`https://drive.google.com/drive/folders/<FOLDER_ID>`).
 2. Buka [script.google.com](https://script.google.com), buat atau buka proyek Apps Script e-SIPENA, lalu salin seluruh isi [google-apps-script/UploadDrive.gs](google-apps-script/UploadDrive.gs) ke `Code.gs`.
-3. Buka **Project Settings > Script Properties** dan atur properti `TARGET_FOLDER_ID` dengan ID folder induk tersebut (atau perbarui konstanta `TARGET_FOLDER_ID` di baris atas skrip). Skrip otomatis membuat dan memilah unggahan ke 3 subfolder:
+3. Buka **Project Settings > Script Properties** dan atur properti `TARGET_FOLDER_ID` dengan ID folder induk tersebut (atau perbarui konstanta `TARGET_FOLDER_ID` di baris atas skrip). Skrip otomatis membuat dan memilah unggahan ke 4 subfolder:
    - `covers/` — sampul `.webp` terkompresi dari Ruang Pengelola (maks. 1 MB)
+   - `kegiatan/` — foto dokumentasi kegiatan Sudut Pustakawan `.webp` (maks. 1 MB per foto)
    - `naskah-pdf/` — kiriman PDF publik dari formulir Kirim Karya (maks. 3 MB)
    - `novel-pdf/` — PDF buku katalog unggahan kurator dari Ruang Pengelola (maks. 16 MB)
 4. Klik **Deploy > New deployment** (atau **Manage deployments > Edit > New version** bila memperbarui), pilih tipe **Web app** dengan **Execute as**: `Me` dan **Who has access**: `Anyone`.

@@ -1,19 +1,21 @@
 /**
- * Google Apps Script Web App — Upload Karya PDF & Sampul Buku (.webp/.png/.jpg) ke Google Drive
+ * Google Apps Script Web App — Upload Karya PDF, Sampul Buku & Foto Kegiatan (.webp/.png/.jpg) ke Google Drive
  * Portal Literasi Digital e-SIPENA SMA Negeri 1 Sidayu
  *
  * Menggunakan 1 Folder Induk (TARGET_FOLDER_ID) lalu memilah file otomatis ke subfolder:
  * - covers/      : Sampul buku WebP terkompresi (maks. 1 MB)
+ * - kegiatan/    : Foto dokumentasi kegiatan Sudut Pustakawan (maks. 1 MB per foto)
  * - naskah-pdf/  : Kiriman karya PDF warga sekolah dari form Kirim Karya (maks. 3 MB)
- * - novel-pdf/ : Unggahan PDF buku katalog oleh kurator dari Ruang Pengelola (maks. 16 MB)
+ * - novel-pdf/   : Unggahan PDF buku katalog oleh kurator dari Ruang Pengelola (maks. 16 MB)
  */
 
 const TARGET_FOLDER_ID = '1jqVR3qnJjnw-QB3uxo8gbPWaRcAL3s5X';
 const PLACEHOLDER_FOLDER_ID = 'GANTI_DENGAN_ID_FOLDER_GOOGLE_DRIVE_ANDA';
 const MAX_PDF_SIZE_BYTES = 3 * 1024 * 1024; // 3 MiB (naskah kiriman warga)
 const MAX_CATALOG_PDF_SIZE_BYTES = 16 * 1024 * 1024; // 16 MiB (khusus buku kurator)
-const MAX_COVER_SIZE_BYTES = 1 * 1024 * 1024; // 1 MiB
+const MAX_COVER_SIZE_BYTES = 1 * 1024 * 1024; // 1 MiB (sampul buku & foto kegiatan)
 const ALLOWED_PDF_FOLDERS = { 'naskah-pdf': true, 'novel-pdf': true };
+const ALLOWED_IMAGE_FOLDERS = { covers: true, kegiatan: true };
 
 function getRootFolderId_() {
   const props = PropertiesService.getScriptProperties();
@@ -100,7 +102,7 @@ function doGet() {
   const configured = folderId && folderId !== PLACEHOLDER_FOLDER_ID;
   return jsonResponse_({
     success: true,
-    service: 'e-SIPENA GDrive Uploader (1 Root ID -> covers / naskah-pdf / novel-pdf)',
+    service: 'e-SIPENA GDrive Uploader (1 Root ID -> covers / kegiatan / naskah-pdf / novel-pdf)',
     configured: Boolean(configured),
     maxBytes: MAX_PDF_SIZE_BYTES,
     maxCatalogPdfBytes: MAX_CATALOG_PDF_SIZE_BYTES,
@@ -146,6 +148,7 @@ function doPost(e) {
     }
 
     const isCover = uploadKind === 'cover' ||
+      uploadKind === 'activity-photo' ||
       /^image\/(webp|png|jpeg)$/i.test(mimeType) ||
       /\.(webp|png|jpe?g)$/i.test(fileName);
 
@@ -155,15 +158,20 @@ function doPost(e) {
 
     if (isCover) {
       if (bytes.length > MAX_COVER_SIZE_BYTES) {
-        return jsonResponse_({ success: false, error: 'Ukuran gambar sampul melebihi batas 1 MB.' });
+        return jsonResponse_({ success: false, error: 'Ukuran gambar melebihi batas 1 MB.' });
       }
       const detected = detectImageType_(bytes);
       if (!detected) {
-        return jsonResponse_({ success: false, error: 'Format gambar sampul wajib WebP, PNG, atau JPEG.' });
+        return jsonResponse_({ success: false, error: 'Format gambar wajib WebP, PNG, atau JPEG.' });
       }
       finalMime = detected.mime;
-      safeName = sanitizeFileName_(fileName, 'cover', detected.ext);
-      subFolderName = 'covers';
+      subFolderName = ALLOWED_IMAGE_FOLDERS[requestedSub]
+        ? requestedSub
+        : uploadKind === 'activity-photo'
+          ? 'kegiatan'
+          : 'covers';
+      const imgPrefix = subFolderName === 'kegiatan' ? 'kegiatan' : 'cover';
+      safeName = sanitizeFileName_(fileName, imgPrefix, detected.ext);
     } else {
       if (!fileName || !fileName.toLowerCase().endsWith('.pdf')) {
         return jsonResponse_({ success: false, error: 'Nama file harus berekstensi .pdf.' });
@@ -194,12 +202,13 @@ function doPost(e) {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
     const fileId = file.getId();
+    const thumbWidth = subFolderName === 'kegiatan' ? 'w1200' : 'w800';
     return jsonResponse_({
       success: true,
       fileId: fileId,
       viewUrl: 'https://drive.google.com/file/d/' + fileId + '/view',
       previewUrl: 'https://drive.google.com/file/d/' + fileId + '/preview',
-      thumbnailUrl: isCover ? ('https://drive.google.com/thumbnail?id=' + fileId + '&sz=w800') : '',
+      thumbnailUrl: isCover ? ('https://drive.google.com/thumbnail?id=' + fileId + '&sz=' + thumbWidth) : '',
       folderName: subFolderName,
       fileName: safeName,
       sizeBytes: bytes.length

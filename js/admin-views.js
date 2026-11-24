@@ -9,6 +9,7 @@ import {
   SUBMISSION_ROLES,
   SUBMISSION_STATUSES,
   adminGetSession,
+  adminListAllActivities,
   adminListAllBooks,
   adminListAllModels3d,
   adminListWorks,
@@ -289,18 +290,28 @@ async function renderAdminWorkspace(container) {
       const snap = snapshotGetter();
       let catalogBooks = snap?.books || [];
       let catalogModels3d = snap?.models3d || [];
-      try {
-        [catalogBooks, catalogModels3d] = await Promise.all([
-          adminListAllBooks(catalogBooks),
-          adminListAllModels3d(catalogModels3d)
-        ]);
-      } catch {
-        // Gunakan snapshot saat ini bila pembacaan daftar lengkap terhambat
+      let catalogActivities = snap?.librarianActivities || [];
+      let activitiesError = '';
+
+      const [booksRes, modelsRes, activitiesRes] = await Promise.allSettled([
+        adminListAllBooks(catalogBooks),
+        adminListAllModels3d(catalogModels3d),
+        adminListAllActivities(catalogActivities)
+      ]);
+      if (booksRes.status === 'fulfilled') catalogBooks = booksRes.value;
+      if (modelsRes.status === 'fulfilled') catalogModels3d = modelsRes.value;
+      if (activitiesRes.status === 'fulfilled') {
+        catalogActivities = activitiesRes.value;
+      } else if (activitiesRes.reason?.code === 'MIGRATION_REQUIRED') {
+        activitiesError = activitiesRes.reason.message;
       }
+
       renderCatalogManager(katalogPane, {
         snapshot: snap,
         catalogBooks,
         catalogModels3d,
+        catalogActivities,
+        activitiesError,
         subSection: adminUiState.catalogSection,
         onSelectSubSection: (sec) => {
           adminUiState.catalogSection = sec;

@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'esipena-shell-v20';
+const SHELL_CACHE = 'esipena-shell-v21';
 const RUNTIME_CACHE = 'esipena-runtime-v16';
 const PDFJS_ORIGIN = 'https://cdn.jsdelivr.net';
 const PDFJS_PATH_PREFIX = '/npm/pdfjs-dist@4.8.69/';
@@ -15,6 +15,9 @@ const APP_SHELL_ASSETS = [
   './assets/images/logo-smansi.webp',
   './assets/icons/icon-192.png',
   './assets/icons/apple-touch-icon.png',
+  './js/activity-modal.js',
+  './js/admin-activity-modal.js',
+  './js/admin-activity-service.js',
   './js/admin-auth.js',
   './js/admin-book-modal.js',
   './js/admin-catalog-modals.js',

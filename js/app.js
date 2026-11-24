@@ -29,6 +29,7 @@ const appState = {
     source: 'local',
     books: [],
     models3d: [],
+    librarianActivities: [],
     madingWorks: [],
     siteSettings: {}
   }
@@ -144,7 +145,8 @@ function renderAllPublicPanels() {
   });
   renderMadingSection();
   renderLibrarianPanel(document.getElementById('librarian-container'), {
-    siteSettings: appState.snapshot.siteSettings
+    siteSettings: appState.snapshot.siteSettings,
+    activities: appState.snapshot.librarianActivities
   });
   renderSubmissionPanel(document.getElementById('submission-container'), {
     getSnapshot: () => appState.snapshot

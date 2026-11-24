@@ -146,6 +146,10 @@ export function getDemoOverrides() {
     models3d: stored?.models3d && typeof stored.models3d === 'object' ? stored.models3d : {},
     createdModels3d: Array.isArray(stored?.createdModels3d) ? stored.createdModels3d : [],
     deletedModels3d: Array.isArray(stored?.deletedModels3d) ? stored.deletedModels3d : [],
+    librarianActivities:
+      stored?.librarianActivities && typeof stored.librarianActivities === 'object' ? stored.librarianActivities : {},
+    createdActivities: Array.isArray(stored?.createdActivities) ? stored.createdActivities : [],
+    deletedActivities: Array.isArray(stored?.deletedActivities) ? stored.deletedActivities : [],
     siteSettings: stored?.siteSettings && typeof stored.siteSettings === 'object' ? stored.siteSettings : {},
     submissions: stored?.submissions && typeof stored.submissions === 'object' ? stored.submissions : {}
   };
@@ -169,6 +173,13 @@ export function saveDemoOverride(bucket, itemId, patch) {
     const idx = current.createdModels3d.findIndex((m) => m.id === itemId);
     if (idx >= 0) {
       current.createdModels3d[idx] = { ...current.createdModels3d[idx], ...patch };
+      return setDemoOverrides(current);
+    }
+  }
+  if (bucket === 'librarianActivities') {
+    const idx = current.createdActivities.findIndex((a) => a.id === itemId);
+    if (idx >= 0) {
+      current.createdActivities[idx] = { ...current.createdActivities[idx], ...patch };
       return setDemoOverrides(current);
     }
   }
@@ -215,6 +226,7 @@ export function mergeSubmissionRows(rows = [], overrides = {}) {
 export function applyDemoOverridesToDataset({
   books = [],
   models3d = [],
+  librarianActivities = [],
   madingWorks = [],
   localSubmissions = [],
   siteSettings = {},
@@ -223,6 +235,7 @@ export function applyDemoOverridesToDataset({
   const ov = getDemoOverrides();
   const deletedBookSet = new Set(ov.deletedBooks);
   const deletedModelsSet = new Set(ov.deletedModels3d);
+  const deletedActivitySet = new Set(ov.deletedActivities);
 
   const allBooks = [...books, ...ov.createdBooks]
     .filter((b) => b && !deletedBookSet.has(b.id))
@@ -233,6 +246,11 @@ export function applyDemoOverridesToDataset({
     .filter((m) => m && !deletedModelsSet.has(m.id))
     .map((m) => (ov.models3d[m.id] ? { ...m, ...ov.models3d[m.id] } : m))
     .filter((m) => includeHidden || m.is_active !== false);
+
+  const allActivities = [...librarianActivities, ...ov.createdActivities]
+    .filter((a) => a && !deletedActivitySet.has(a.id))
+    .map((a) => (ov.librarianActivities[a.id] ? { ...a, ...ov.librarianActivities[a.id] } : a))
+    .filter((a) => includeHidden || a.is_active !== false);
 
   const mergedSettings = structuredClone(siteSettings || {});
   for (const [key, val] of Object.entries(ov.siteSettings)) {
@@ -245,6 +263,7 @@ export function applyDemoOverridesToDataset({
   return {
     books: allBooks,
     models3d: allModels3d,
+    librarianActivities: allActivities,
     madingWorks: mergedMading,
     siteSettings: mergedSettings
   };

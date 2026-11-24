@@ -1,7 +1,6 @@
 /**
- * Modal Editor Model 3D Gresik & Dokumen Pustakawan (Fitur 5) — e-SIPENA SMAN 1 Sidayu
- * Mendukung ganti judul, sunting teks perkenalan + uji suara Web Speech API,
- * pilih aset lokal 3D/placeholder, serta pengelolaan dokumen Sudut Pustakawan.
+ * Modal Editor Model 3D Gresik (Fitur 5) — e-SIPENA SMAN 1 Sidayu
+ * Mendukung ganti judul, sunting teks perkenalan + uji audio/suara, serta pilih aset lokal 3D/placeholder.
  */
 
 import {
@@ -17,8 +16,7 @@ import {
 import {
   adminCreateModel3d,
   adminDeleteModel3d,
-  adminSaveModel3d,
-  adminSaveSetting
+  adminSaveModel3d
 } from './data-service.js';
 import { closeModal, createIcon, escapeHtml, openModal, showToast } from './ui-utils.js';
 
@@ -246,118 +244,6 @@ export function openModel3dEditorModal(model, onUpdated, { nextSortOrder = 4 } =
     } catch (err) {
       playSfx('error');
       showToast(err?.message || 'Gagal menyimpan model 3D.', 'error');
-      if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = false;
-    }
-  });
-}
-
-/**
- * Membuka modal untuk menambah (docIndex = -1) atau menyunting/menghapus dokumen Sudut Pustakawan.
- * @param {Record<string, any>} cornerSetting
- * @param {number} docIndex
- * @param {() => Promise<void> | void} onUpdated
- */
-export function openLibrarianDocModal(cornerSetting, docIndex, onUpdated) {
-  const docs = Array.isArray(cornerSetting?.documents) ? cornerSetting.documents : [];
-  const isNew = docIndex < 0 || !docs[docIndex];
-  const doc = isNew ? { id: `doc-${Date.now().toString(36)}`, title: '', category: 'Panduan Penulis', updated_label: 'Edisi 2026', url: '', summary: '' } : docs[docIndex];
-
-  const bodyEl = openModal({
-    title: isNew ? 'Tambah Dokumen Sudut Pustakawan' : `Sunting Dokumen: ${doc.title}`,
-    html: `
-      <form id="admin-doc-form" class="admin-modal-form">
-        <div class="admin-form-grid">
-          <label class="form-field form-field-span2">
-            <span>Judul Dokumen *</span>
-            <input id="adm-doc-title" type="text" value="${escapeHtml(doc.title || '')}" required>
-          </label>
-          <label class="form-field">
-            <span>Kategori *</span>
-            <input id="adm-doc-cat" type="text" value="${escapeHtml(doc.category || '')}" required>
-          </label>
-          <label class="form-field">
-            <span>Label Edisi</span>
-            <input id="adm-doc-updated" type="text" value="${escapeHtml(doc.updated_label || '')}" placeholder="Edisi 2026">
-          </label>
-          <label class="form-field form-field-span2">
-            <span>Tautan Dokumen Google Drive / PDF</span>
-            <input id="adm-doc-url" type="url" value="${escapeHtml(doc.url || '')}" placeholder="https://drive.google.com/file/d/.../view">
-          </label>
-          <label class="form-field form-field-span2">
-            <span>Ringkasan Dokumen *</span>
-            <textarea id="adm-doc-summary" rows="3" required>${escapeHtml(doc.summary || '')}</textarea>
-          </label>
-        </div>
-        <div class="admin-modal-actions admin-modal-actions-split">
-          ${!isNew ? '<button type="button" id="btn-delete-doc" class="danger-btn">Hapus Dokumen</button>' : '<span></span>'}
-          <button type="submit" id="btn-save-doc" class="primary-btn">${isNew ? 'Tambahkan Dokumen' : 'Simpan Dokumen'}</button>
-        </div>
-      </form>
-    `
-  });
-
-  if (!bodyEl) return;
-
-  const delBtn = bodyEl.querySelector('#btn-delete-doc');
-  let deleteArmed = false;
-  delBtn?.addEventListener('click', async () => {
-    if (isNew) return;
-    if (!deleteArmed) {
-      deleteArmed = true;
-      delBtn.textContent = 'Konfirmasi Hapus?';
-      playSfx('click');
-      return;
-    }
-    if (delBtn instanceof HTMLButtonElement) delBtn.disabled = true;
-    try {
-      const nextDocs = docs.filter((_, idx) => idx !== docIndex);
-      const hasUrl = nextDocs.some((d) => /^https?:\/\//i.test(String(d.url || '')));
-      await adminSaveSetting(
-        'librarian_corner',
-        { ...cornerSetting, documents: nextDocs, is_placeholder: !hasUrl },
-        { is_placeholder: !hasUrl }
-      );
-      await syncPortalAfterSave(onUpdated);
-      playSfx('success');
-      showToast('Dokumen Sudut Pustakawan dihapus.', 'success');
-      closeModal();
-    } catch (err) {
-      playSfx('error');
-      showToast(err?.message || 'Gagal menghapus dokumen.', 'error');
-      if (delBtn instanceof HTMLButtonElement) delBtn.disabled = false;
-    }
-  });
-
-  bodyEl.querySelector('#admin-doc-form')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const saveBtn = bodyEl.querySelector('#btn-save-doc');
-    if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = true;
-
-    try {
-      const editedDoc = {
-        ...doc,
-        title: String(bodyEl.querySelector('#adm-doc-title')?.value || '').trim(),
-        category: String(bodyEl.querySelector('#adm-doc-cat')?.value || '').trim(),
-        updated_label: String(bodyEl.querySelector('#adm-doc-updated')?.value || '').trim(),
-        url: String(bodyEl.querySelector('#adm-doc-url')?.value || '').trim(),
-        summary: String(bodyEl.querySelector('#adm-doc-summary')?.value || '').trim()
-      };
-      const nextDocs = isNew
-        ? [...docs, editedDoc]
-        : docs.map((item, idx) => (idx === docIndex ? editedDoc : item));
-      const hasUrl = nextDocs.some((d) => /^https?:\/\//i.test(String(d.url || '')));
-      await adminSaveSetting(
-        'librarian_corner',
-        { ...cornerSetting, documents: nextDocs, is_placeholder: !hasUrl },
-        { is_placeholder: !hasUrl }
-      );
-      await syncPortalAfterSave(onUpdated);
-      playSfx('success');
-      showToast(isNew ? 'Dokumen Sudut Pustakawan ditambahkan.' : 'Dokumen Sudut Pustakawan diperbarui.', 'success');
-      closeModal();
-    } catch (err) {
-      playSfx('error');
-      showToast(err?.message || 'Gagal menyimpan dokumen Sudut Pustakawan.', 'error');
       if (saveBtn instanceof HTMLButtonElement) saveBtn.disabled = false;
     }
   });

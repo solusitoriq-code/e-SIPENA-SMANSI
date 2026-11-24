@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Skema Database Supabase — Portal Literasi Digital e-SIPENA SMAN 1 Sidayu
--- Terdiri dari: 4 tabel utama, 1 view publik, RLS ketat, dan 2 RPC publik
+-- Terdiri dari: 5 tabel utama, 1 view publik, RLS ketat, dan 2 RPC publik
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -183,6 +183,29 @@ CREATE TRIGGER trg_site_settings_updated_at
   EXECUTE FUNCTION public.set_updated_at();
 
 -- ----------------------------------------------------------------------------
+-- 5. Tabel librarian_activities (Kegiatan & Dokumentasi Multi-Foto Sudut Pustakawan)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.librarian_activities (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text NOT NULL DEFAULT '',
+  photos jsonb NOT NULL DEFAULT '[]'::jsonb,
+  sort_order integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_librarian_activities_active_sort
+  ON public.librarian_activities (is_active, sort_order, created_at DESC);
+
+DROP TRIGGER IF EXISTS trg_librarian_activities_updated_at ON public.librarian_activities;
+CREATE TRIGGER trg_librarian_activities_updated_at
+  BEFORE UPDATE ON public.librarian_activities
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_updated_at();
+
+-- ----------------------------------------------------------------------------
 -- View Publik: public_mading_works
 -- Hanya status 'Lolos Mading', TANPA kolom contact_wa
 -- ----------------------------------------------------------------------------
@@ -215,11 +238,13 @@ ALTER TABLE public.books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.models_3d ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.librarian_activities ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.books FROM anon;
 REVOKE ALL ON public.submissions FROM anon;
 REVOKE ALL ON public.models_3d FROM anon;
 REVOKE ALL ON public.site_settings FROM anon;
+REVOKE ALL ON public.librarian_activities FROM anon;
 REVOKE ALL ON public.public_mading_works FROM anon;
 
 GRANT USAGE ON SCHEMA public TO anon, authenticated;
@@ -227,9 +252,10 @@ GRANT SELECT ON public.books TO anon;
 GRANT SELECT ON public.public_mading_works TO anon;
 GRANT SELECT ON public.models_3d TO anon;
 GRANT SELECT ON public.site_settings TO anon;
+GRANT SELECT ON public.librarian_activities TO anon;
 GRANT INSERT ON public.submissions TO anon;
 
-GRANT ALL ON public.books, public.submissions, public.models_3d, public.site_settings TO authenticated;
+GRANT ALL ON public.books, public.submissions, public.models_3d, public.site_settings, public.librarian_activities TO authenticated;
 GRANT SELECT ON public.public_mading_works TO authenticated;
 
 -- Policy tabel books
@@ -296,6 +322,22 @@ CREATE POLICY site_settings_anon_select_public
 DROP POLICY IF EXISTS site_settings_authenticated_all ON public.site_settings;
 CREATE POLICY site_settings_authenticated_all
   ON public.site_settings
+  FOR ALL
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- Policy tabel librarian_activities
+DROP POLICY IF EXISTS librarian_activities_anon_select_active ON public.librarian_activities;
+CREATE POLICY librarian_activities_anon_select_active
+  ON public.librarian_activities
+  FOR SELECT
+  TO anon
+  USING (is_active = true);
+
+DROP POLICY IF EXISTS librarian_activities_authenticated_all ON public.librarian_activities;
+CREATE POLICY librarian_activities_authenticated_all
+  ON public.librarian_activities
   FOR ALL
   TO authenticated
   USING (true)

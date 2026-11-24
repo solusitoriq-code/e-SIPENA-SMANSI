@@ -1,14 +1,15 @@
 /**
  * Sub-Modul Pengelola Katalog & Pameran 3D (Fitur 5) — e-SIPENA SMAN 1 Sidayu
  * Menangani daftar & pembuatan/penyuntingan Buku/Novel, Koleksi Model 3D Gresik,
- * kontak WA admin, KPI buku 2025, serta dokumen Sudut Pustakawan.
+ * kontak WA admin, KPI buku 2025, serta kegiatan Sudut Pustakawan.
  */
 
 import { APP_CONFIG } from './config.js';
 import { playSfx } from './audio.js';
-import { BOOK_CATEGORIES, adminSaveSetting } from './data-service.js';
+import { BOOK_CATEGORIES, adminSaveSetting, normalizeActivityPhotos } from './data-service.js';
 import { openBookEditorModal } from './admin-book-modal.js';
-import { openLibrarianDocModal, openModel3dEditorModal } from './admin-catalog-modals.js';
+import { openLibrarianActivityModal } from './admin-activity-modal.js';
+import { openModel3dEditorModal } from './admin-catalog-modals.js';
 import { createIcon, escapeHtml, resolveGDriveLinks, showToast } from './ui-utils.js';
 
 const BOOK_SECTION_META = Object.freeze({
@@ -79,11 +80,10 @@ function renderBookCategorySection(category, items, { note, allowAdd = true, sho
         </div>
         ${allowAdd ? `<button type="button" class="primary-btn admin-row-btn" data-add-book-cat="${escapeHtml(category)}">+ Tambah ${escapeHtml(category)}</button>` : ''}
       </div>
-      ${
-        items.length
-          ? `<div class="catalog-admin-grid">${items.map((book) => renderBookAdminCard(book, { showCategory })).join('')}</div>`
-          : `<p class="admin-section-empty">Belum ada buku pada jenis ${escapeHtml(category)}.</p>`
-      }
+      ${items.length
+      ? `<div class="catalog-admin-grid">${items.map((book) => renderBookAdminCard(book, { showCategory })).join('')}</div>`
+      : `<p class="admin-section-empty">Belum ada buku pada jenis ${escapeHtml(category)}.</p>`
+    }
     </section>
   `;
 }
@@ -92,18 +92,63 @@ function getNextSortOrder(items = []) {
   return items.reduce((max, item) => Math.max(max, Number(item?.sort_order || 0)), 0) + 1;
 }
 
+function renderActivitiesManagerCard(activities = [], activitiesError = '') {
+  const rowsHtml = activities.length
+    ? activities
+      .map((act) => {
+        const photos = normalizeActivityPhotos(act.photos);
+        const thumbUrl = photos[0]?.url || 'assets/images/logo-smansi.webp';
+        const desc = String(act.description || '').trim();
+        const descNote = desc ? (desc.length > 65 ? `${desc.slice(0, 62)}...` : desc) : 'Tanpa deskripsi singkat';
+        const hiddenNote = act.is_active === false ? ' &middot; Disembunyikan' : '';
+        return `
+            <div class="doc-editor-row">
+              <div class="activity-editor-row-info">
+                <img class="activity-editor-thumb" src="${escapeHtml(thumbUrl)}" alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
+                <div><strong>${escapeHtml(act.title)}</strong><p>${photos.length} foto &middot; ${escapeHtml(descNote)}${hiddenNote}</p></div>
+              </div>
+              <button type="button" class="secondary-btn" data-edit-activity-id="${escapeHtml(act.id)}">Sunting</button>
+            </div>
+          `;
+      })
+      .join('')
+    : '<p class="admin-muted-note">Belum ada kegiatan Sudut Pustakawan. Klik + Tambah untuk membuat baru.</p>';
+
+  return `
+    <section class="sub-card">
+      <div class="sub-card-head">
+        <h3>Kegiatan Sudut Pustakawan (${activities.length})</h3>
+        <button type="button" class="primary-btn admin-row-btn" id="btn-admin-add-activity">+ Tambah</button>
+      </div>
+      ${activitiesError ? `<p class="file-status-text is-error">${escapeHtml(activitiesError)}</p>` : ''}
+      <div class="doc-editor-list">${rowsHtml}</div>
+    </section>
+  `;
+}
+
 export function renderCatalogManager(
   container,
-  { snapshot, catalogBooks = null, catalogModels3d = null, subSection, onSelectSubSection, onUpdated }
+  {
+    snapshot,
+    catalogBooks = null,
+    catalogModels3d = null,
+    catalogActivities = null,
+    activitiesError = '',
+    subSection,
+    onSelectSubSection,
+    onUpdated
+  }
 ) {
   const books = Array.isArray(catalogBooks) ? catalogBooks : snapshot?.books || [];
   const models3d = Array.isArray(catalogModels3d) ? catalogModels3d : snapshot?.models3d || [];
+  const activities = Array.isArray(catalogActivities)
+    ? catalogActivities
+    : snapshot?.librarianActivities || [];
   const settings = snapshot?.siteSettings || {};
   const contact = settings.contact_admin || {};
   const corner = settings.librarian_corner || {};
   const portalLinks = settings.portal_links || {};
   const kpi = settings.kpi_stats || {};
-  const docs = Array.isArray(corner.documents) ? corner.documents : [];
 
   const section = ['books', 'models3d', 'settings'].includes(subSection) ? subSection : 'books';
   const groupedBooks = groupBooksByCategory(books);
@@ -111,6 +156,7 @@ export function renderCatalogManager(
     BOOK_CATEGORIES.map((cat) => [cat, getNextSortOrder(groupedBooks.buckets[cat])])
   );
   const nextModelOrder = getNextSortOrder(models3d);
+  const nextActivityOrder = getNextSortOrder(activities);
 
   let bodyHtml = '';
   if (section === 'books') {
@@ -123,19 +169,18 @@ export function renderCatalogManager(
       </div>
       <div class="catalog-type-stack">
         ${BOOK_CATEGORIES.map((cat) =>
-          renderBookCategorySection(cat, groupedBooks.buckets[cat], {
-            note: BOOK_SECTION_META[cat] || `Koleksi buku ${cat}.`
-          })
-        ).join('')}
-        ${
-          groupedBooks.others.length
-            ? renderBookCategorySection('Kategori Lainnya', groupedBooks.others, {
-                note: 'Buku dengan kategori di luar Novel, Cerpen, dan Puisi.',
-                allowAdd: false,
-                showCategory: true
-              })
-            : ''
-        }
+      renderBookCategorySection(cat, groupedBooks.buckets[cat], {
+        note: BOOK_SECTION_META[cat] || `Koleksi buku ${cat}.`
+      })
+    ).join('')}
+        ${groupedBooks.others.length
+        ? renderBookCategorySection('Kategori Lainnya', groupedBooks.others, {
+          note: 'Buku dengan kategori di luar Novel, Cerpen, dan Puisi.',
+          allowAdd: false,
+          showCategory: true
+        })
+        : ''
+      }
       </div>
     `;
   } else if (section === 'models3d') {
@@ -181,63 +226,27 @@ export function renderCatalogManager(
             <span class="panel-badge">site_settings</span>
           </div>
           <div class="admin-form-grid">
-            <label class="form-field">
-              <span>Nomor WhatsApp Admin (628...)</span>
-              <input id="adm-wa-num" type="text" value="${escapeHtml(contact.whatsapp_number || APP_CONFIG.SCHOOL_DEFAULTS.whatsappNumber)}" required>
-            </label>
-            <label class="form-field">
-              <span>Label Nama Admin</span>
-              <input id="adm-wa-label" type="text" value="${escapeHtml(contact.whatsapp_label || 'Pustakawan SMAN 1 Sidayu')}" required>
-            </label>
-            <label class="form-field">
-              <span>Surel Perpustakaan</span>
-              <input id="adm-wa-email" type="email" value="${escapeHtml(contact.email || '')}">
-            </label>
-            <label class="form-field">
-              <span>URL Publik Portal (QR)</span>
-              <input id="adm-portal-url" type="url" value="${escapeHtml(portalLinks.portal_url || '')}" placeholder="https://esipena-smansi.pages.dev">
-            </label>
-            <label class="form-field">
-              <span>Rekam Jejak Buku 2025 (KPI)</span>
-              <input id="adm-kpi-2025" type="number" min="0" max="9999" value="${escapeHtml(kpi.books_2025_count ?? 23)}">
-            </label>
-            <label class="form-field">
-              <span>Jam Layanan Pustakawan</span>
-              <input id="adm-lib-hours" type="text" value="${escapeHtml(corner.service_hours || 'Senin - Jumat, 07.00 - 15.00 WIB')}">
-            </label>
-            <label class="form-field form-field-span2">
-              <span>Awalan Pesan Otomatis WA</span>
-              <input id="adm-wa-prefix" type="text" value="${escapeHtml(contact.order_message_prefix || '')}">
-            </label>
+            ${[
+        ['adm-wa-num', 'Nomor WhatsApp Admin (628...)', 'text', contact.whatsapp_number || APP_CONFIG.SCHOOL_DEFAULTS.whatsappNumber, 'required'],
+        ['adm-wa-label', 'Label Nama Admin', 'text', contact.whatsapp_label || 'Pustakawan SMAN 1 Sidayu', 'required'],
+        ['adm-wa-email', 'Surel Perpustakaan', 'email', contact.email || '', ''],
+        ['adm-portal-url', 'URL Publik Portal (QR)', 'url', portalLinks.portal_url || '', 'placeholder="https://esipena-smansi.pages.dev"'],
+        ['adm-kpi-2025', 'Rekam Jejak Buku 2025 (KPI)', 'number', kpi.books_2025_count ?? 23, 'min="0" max="9999"'],
+        ['adm-lib-hours', 'Jam Layanan Pustakawan', 'text', corner.service_hours || 'Senin - Jumat, 07.00 - 15.00 WIB', ''],
+        ['adm-wa-prefix', 'Awalan Pesan Otomatis WA', 'text', contact.order_message_prefix || '', '', true]
+      ]
+        .map(
+          ([id, label, type, val, extra, span2]) =>
+            `<label class="form-field${span2 ? ' form-field-span2' : ''}"><span>${label}</span><input id="${id}" type="${type}" value="${escapeHtml(val)}" ${extra}></label>`
+        )
+        .join('')}
           </div>
           <div class="admin-modal-actions">
             <button type="submit" id="btn-save-settings" class="primary-btn">Simpan Pengaturan</button>
           </div>
         </form>
 
-        <section class="sub-card">
-          <div class="sub-card-head">
-            <h3>Dokumen Sudut Pustakawan (${docs.length})</h3>
-            <button type="button" class="primary-btn admin-row-btn" id="btn-admin-add-doc">+ Tambah</button>
-          </div>
-          <div class="doc-editor-list">
-            ${docs.length
-        ? docs
-          .map(
-            (doc, idx) => `
-                      <div class="doc-editor-row">
-                        <div>
-                          <strong>${escapeHtml(doc.title)}</strong>
-                          <p>${escapeHtml(doc.category || 'Panduan')} &middot; ${doc.url ? 'Tautan terisi' : 'Belum ada URL'}</p>
-                        </div>
-                        <button type="button" class="secondary-btn" data-edit-doc-idx="${idx}">Sunting</button>
-                      </div>
-                    `
-          )
-          .join('')
-        : '<p class="admin-muted-note">Belum ada dokumen panduan. Klik + Tambah untuk membuat baru.</p>'}
-          </div>
-        </section>
+        ${renderActivitiesManagerCard(activities, activitiesError)}
       </div>
     `;
   }
@@ -291,9 +300,9 @@ export function renderCatalogManager(
       return;
     }
 
-    if (target.closest('#btn-admin-add-doc')) {
+    if (target.closest('#btn-admin-add-activity')) {
       playSfx('pop');
-      openLibrarianDocModal(corner, -1, onUpdated);
+      openLibrarianActivityModal(null, onUpdated, { nextSortOrder: nextActivityOrder });
       return;
     }
 
@@ -321,10 +330,13 @@ export function renderCatalogManager(
       return;
     }
 
-    const docBtn = target.closest('[data-edit-doc-idx]');
-    if (docBtn instanceof HTMLElement) {
-      playSfx('pop');
-      openLibrarianDocModal(corner, Number(docBtn.dataset.editDocIdx), onUpdated);
+    const actBtn = target.closest('[data-edit-activity-id]');
+    if (actBtn instanceof HTMLElement) {
+      const act = activities.find((a) => String(a.id) === actBtn.dataset.editActivityId);
+      if (act) {
+        playSfx('pop');
+        openLibrarianActivityModal(act, onUpdated, { nextSortOrder: nextActivityOrder });
+      }
     }
   };
 
