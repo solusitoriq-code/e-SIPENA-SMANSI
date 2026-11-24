@@ -6,48 +6,80 @@
 
 import { playSfx } from './audio.js';
 import { bindHorizontalSwipe } from './nav-controls.js';
-import { escapeHtml, renderSwipeCueHtml } from './ui-utils.js';
+import {
+  escapeHtml,
+  extractPlainLiteraryText,
+  renderFormattedLiteraryHtml,
+  renderSwipeCueHtml
+} from './ui-utils.js';
+
+function splitLongTextToParagraphBlocks(text, maxCharsPerPage) {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const chunks = [];
+  let chunk = '';
+  for (const w of words) {
+    if (chunk.length + w.length + 1 > maxCharsPerPage && chunk) {
+      chunks.push({ html: `<p>${escapeHtml(chunk)}</p>`, text: chunk });
+      chunk = w;
+    } else {
+      chunk = chunk ? `${chunk} ${w}` : w;
+    }
+  }
+  if (chunk) chunks.push({ html: `<p>${escapeHtml(chunk)}</p>`, text: chunk });
+  return chunks;
+}
+
+function extractFormattedBlocks(rawText) {
+  const safeHtml = renderFormattedLiteraryHtml(rawText, 'Teks bacaan belum tersedia.');
+  if (typeof DOMParser !== 'function') {
+    const plain = extractPlainLiteraryText(safeHtml) || 'Teks bacaan belum tersedia.';
+    return [{ html: `<p>${escapeHtml(plain)}</p>`, text: plain }];
+  }
+  const doc = new DOMParser().parseFromString(safeHtml, 'text/html');
+  const children = [...doc.body.children];
+  if (!children.length) {
+    const plain = extractPlainLiteraryText(safeHtml) || 'Teks bacaan belum tersedia.';
+    return [{ html: `<p>${escapeHtml(plain)}</p>`, text: plain }];
+  }
+  return children
+    .map((el) => ({
+      html: el.outerHTML,
+      text: extractPlainLiteraryText(el.textContent || '')
+    }))
+    .filter((item) => item.text || item.html);
+}
 
 function paginateTextBlocks(rawText, maxCharsPerPage = 780) {
-  const paragraphs = String(rawText || '')
-    .split(/\n+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-
-  if (!paragraphs.length) return [['Teks bacaan belum tersedia.']];
+  const blocks = extractFormattedBlocks(rawText);
+  if (!blocks.length) {
+    return [[{ html: '<p>Teks bacaan belum tersedia.</p>', text: 'Teks bacaan belum tersedia.' }]];
+  }
 
   const pages = [];
   let current = [];
   let charCount = 0;
 
-  for (const para of paragraphs) {
-    if (para.length > maxCharsPerPage) {
+  for (const block of blocks) {
+    const len = block.text.length;
+    if (len > maxCharsPerPage) {
       if (current.length) {
         pages.push(current);
         current = [];
         charCount = 0;
       }
-      const words = para.split(/\s+/);
-      let chunk = '';
-      for (const w of words) {
-        if (chunk.length + w.length + 1 > maxCharsPerPage && chunk) {
-          pages.push([chunk]);
-          chunk = w;
-        } else {
-          chunk = chunk ? `${chunk} ${w}` : w;
-        }
+      for (const chunkBlock of splitLongTextToParagraphBlocks(block.text, maxCharsPerPage)) {
+        pages.push([chunkBlock]);
       }
-      if (chunk) pages.push([chunk]);
       continue;
     }
 
-    if (charCount + para.length > maxCharsPerPage && current.length) {
+    if (charCount + len > maxCharsPerPage && current.length) {
       pages.push(current);
-      current = [para];
-      charCount = para.length;
+      current = [block];
+      charCount = len;
     } else {
-      current.push(para);
-      charCount += para.length;
+      current.push(block);
+      charCount += len;
     }
   }
 
@@ -78,7 +110,7 @@ export function mountTextSlideReader({
   subtitle,
   rawText
 }) {
-  if (!paperEl) return { getCurrentPageText: () => rawText };
+  if (!paperEl) return { getCurrentPageText: () => extractPlainLiteraryText(rawText) };
 
   const pages = paginateTextBlocks(rawText);
   let page = 1;
@@ -96,7 +128,7 @@ export function mountTextSlideReader({
     if (dir > 0) paperEl.classList.add('is-slide-next');
     else if (dir < 0) paperEl.classList.add('is-slide-prev');
 
-    paperEl.innerHTML = `${headerHtml}${slice.map((p) => `<p>${escapeHtml(p)}</p>`).join('')}`;
+    paperEl.innerHTML = `${headerHtml}${slice.map((b) => b.html).join('')}`;
     paperEl.scrollTop = 0;
 
     if (pageInfoEl) pageInfoEl.textContent = `Hal ${page} / ${totalPages}`;
@@ -135,6 +167,6 @@ export function mountTextSlideReader({
   renderPage(0);
 
   return {
-    getCurrentPageText: () => (pages[page - 1] || []).join(' ')
+    getCurrentPageText: () => (pages[page - 1] || []).map((b) => b.text).join(' ')
   };
 }

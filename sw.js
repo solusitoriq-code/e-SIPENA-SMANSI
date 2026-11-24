@@ -1,5 +1,5 @@
-const SHELL_CACHE = 'esipena-shell-v15';
-const RUNTIME_CACHE = 'esipena-runtime-v15';
+const SHELL_CACHE = 'esipena-shell-v20';
+const RUNTIME_CACHE = 'esipena-runtime-v16';
 const PDFJS_ORIGIN = 'https://cdn.jsdelivr.net';
 const PDFJS_PATH_PREFIX = '/npm/pdfjs-dist@4.8.69/';
 const MODEL_VIEWER_ORIGIN = 'https://ajax.googleapis.com';
@@ -30,6 +30,7 @@ const APP_SHELL_ASSETS = [
   './js/community-views.js',
   './js/config.js',
   './js/data-service.js',
+  './js/literary-editor.js',
   './js/media-upload.js',
   './js/modal-helper.js',
   './js/model-3d-modal.js',

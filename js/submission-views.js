@@ -20,6 +20,7 @@ import {
   renderTrackResult,
   runTrackingLookup
 } from './tracking-panel.js';
+import { bindLiteraryEditor, renderLiteraryEditorHtml } from './literary-editor.js';
 import { createIcon, escapeHtml, showToast } from './ui-utils.js';
 
 let snapshotGetter = () => ({ madingWorks: [] });
@@ -68,34 +69,6 @@ function setSubmissionMode(container, mode) {
   if (bodyInput instanceof HTMLTextAreaElement) bodyInput.required = !isPdf;
 }
 
-function applyMarkdownShortcut(textarea, kind) {
-  if (!(textarea instanceof HTMLTextAreaElement)) return;
-  const start = textarea.selectionStart ?? textarea.value.length;
-  const end = textarea.selectionEnd ?? textarea.value.length;
-  const selected = textarea.value.slice(start, end);
-  let insert = '';
-  let selStart = 0;
-  let selEnd = 0;
-
-  if (kind === 'bold' || kind === 'italic') {
-    const marker = kind === 'bold' ? '**' : '*';
-    const sample = selected || (kind === 'bold' ? 'tebal' : 'miring');
-    insert = `${marker}${sample}${marker}`;
-    selStart = marker.length;
-    selEnd = marker.length + sample.length;
-  } else {
-    const lines = (selected || 'Kutipan karya').split('\n').map((l) => (l.startsWith('> ') ? l : `> ${l}`));
-    insert = lines.join('\n');
-    selStart = 2;
-    selEnd = insert.length;
-  }
-
-  textarea.setRangeText(insert, start, end, 'select');
-  textarea.focus();
-  textarea.setSelectionRange(start + selStart, start + selEnd);
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
-}
-
 function updateSelectedFileUi(container, file, errorMsg = '') {
   const statusEl = container.querySelector('#sub-file-status');
   const clearBtn = container.querySelector('#btn-sub-clear-file');
@@ -139,7 +112,13 @@ function bindSubmissionEvents(container) {
   syncSubmitEnabled(false);
 
   summaryEl?.addEventListener('input', () => updateCharCounter(summaryEl, summaryCountEl, 500));
-  bodyEl?.addEventListener('input', () => updateCharCounter(bodyEl, bodyCountEl, 15000));
+  const bodyEditor = bindLiteraryEditor({
+    panelEl: container.querySelector('#sub-text-panel'),
+    textareaEl: bodyEl,
+    countEl: bodyCountEl,
+    maxLength: 15000,
+    onFormatClick: () => playSfx('click')
+  });
 
   fileInput?.addEventListener('change', async () => {
     const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] || null : null;
@@ -230,7 +209,7 @@ function bindSubmissionEvents(container) {
       setSubmissionMode(container, 'pdf');
       updateSelectedFileUi(container, null);
       updateCharCounter(summaryEl, summaryCountEl, 500);
-      updateCharCounter(bodyEl, bodyCountEl, 15000);
+      bodyEditor.syncCount();
 
       playSfx('success');
       showToast(`Naskah terkirim dengan Kode Lacak ${result.trackingCode}.`, 'success');
@@ -256,13 +235,6 @@ function bindSubmissionEvents(container) {
     if (modeBtn instanceof HTMLElement) {
       playSfx('click');
       setSubmissionMode(container, modeBtn.dataset.submitMode || 'pdf');
-      return;
-    }
-
-    const fmtBtn = target.closest('[data-md-fmt]');
-    if (fmtBtn instanceof HTMLElement) {
-      playSfx('click');
-      applyMarkdownShortcut(bodyEl, fmtBtn.dataset.mdFmt || 'bold');
       return;
     }
 
@@ -349,18 +321,17 @@ export function renderSubmissionPanel(container, { getSnapshot } = {}) {
             </div>
             <p id="sub-file-status" class="file-status-text">Wajib format .pdf maksimal ${maxMb} MB (cocok untuk novel, cerpen, maupun naskah berdesain).</p>
           </div>
-          <div id="sub-text-panel" class="sub-text-panel" hidden>
-            <div class="editor-format-bar">
-              <div class="editor-fmt-buttons" role="group" aria-label="Pemformatan teks naskah">
-                <button type="button" class="editor-fmt-btn" data-md-fmt="bold"><strong>Tebal</strong></button>
-                <button type="button" class="editor-fmt-btn" data-md-fmt="italic"><em>Miring</em></button>
-                <button type="button" class="editor-fmt-btn" data-md-fmt="quote">Kutipan</button>
-              </div>
-              <span id="sub-body-count" class="char-counter">0/15000</span>
-            </div>
-            <textarea id="sub-body-text" rows="5" placeholder="Ketik puisi, cerpen singkat, atau kutipan karya..." maxlength="15000"></textarea>
-            <p class="file-status-text">Gunakan Enter untuk baris/bait baru, **tebal**, *miring*, atau &gt; kutipan.</p>
-          </div>
+          ${renderLiteraryEditorHtml({
+            panelId: 'sub-text-panel',
+            textareaId: 'sub-body-text',
+            countId: 'sub-body-count',
+            toolbarLabel: 'Pemformatan teks naskah',
+            rows: 5,
+            placeholder: 'Ketik puisi, cerpen singkat, atau kutipan karya...',
+            maxLength: 15000,
+            hidden: true,
+            hintText: 'Gunakan Enter untuk baris/bait baru, **tebal**, *miring*, atau > kutipan.'
+          })}
           <label class="checkbox-consent">
             <input id="sub-anti-plagiat" type="checkbox" required>
             <span>Saya menyatakan karya ini asli buatan sendiri, bebas plagiat, dan bukan salinan utuh AI.</span>

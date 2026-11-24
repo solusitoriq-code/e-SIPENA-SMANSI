@@ -618,10 +618,90 @@ button {
   white-space: nowrap;
 }
 
+/* Etalase Antologi 3 Section (Novel, Cerpen, Puisi) */
+.antologi-global-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.antologi-jump-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.antologi-scroll-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+
+.antologi-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #d5dfec;
+  border-radius: var(--radius-md);
+  scroll-margin-top: 8px;
+}
+
+.antologi-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.antologi-sec-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.antologi-sec-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.antologi-sec-title {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy-950);
+  line-height: 1.2;
+}
+
+.antologi-sec-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.antologi-novel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* Grid Rak 4 Kolom Etalase (Muat Rapi di 16:9) */
 .books-shelf-stage {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
   display: flex;
   align-items: stretch;
   gap: 8px;
@@ -657,11 +737,9 @@ button {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, 1fr);
+  grid-auto-rows: auto;
   gap: 14px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
+  overflow: visible;
   user-select: none;
   padding: 2px 3px 4px;
   transition: transform 0.12s ease-out;
@@ -672,7 +750,7 @@ button {
 }
 
 .books-grid.is-eight-grid {
-  grid-auto-rows: minmax(250px, auto);
+  grid-auto-rows: auto;
 }
 
 .book-card {
@@ -695,8 +773,8 @@ button {
 }
 
 .book-cover-stage {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
+  height: clamp(185px, 26vh, 240px);
   position: relative;
   display: flex;
   align-items: center;
@@ -1003,6 +1081,122 @@ button {
   animation: swipePrevIn 0.22s ease;
 }
 
+/* Kartu Antologi Editorial (Cerpen & Puisi Tanpa Sampul & Penulis) */
+.editorial-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.editorial-book-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 14px;
+  background: var(--surface-card);
+  border: 1px solid #d5dfec;
+  border-left: 4px solid var(--royal-700);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(15, 41, 74, 0.06);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.editorial-cards-puisi .editorial-book-card {
+  border-left-color: var(--gold-500);
+}
+
+.editorial-book-card:hover,
+.editorial-book-card:focus-within {
+  transform: translateY(-2px);
+  border-color: var(--royal-700);
+  box-shadow: 0 12px 24px rgba(15, 41, 74, 0.13);
+}
+
+.editorial-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.editorial-cat-pill,
+.editorial-year-pill,
+.editorial-pdf-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.editorial-cat-pill {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.editorial-cards-puisi .editorial-cat-pill {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.editorial-year-pill {
+  background: #f1f5f9;
+  color: var(--text-secondary);
+}
+
+.editorial-pdf-pill {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.editorial-card-title {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--navy-950);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.6em;
+}
+
+.editorial-card-sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.editorial-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.editorial-empty-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  color: var(--text-secondary);
+}
+
+.editorial-empty-card p {
+  margin: 0;
+  font-size: 14px;
+}
+
 .inline-action-btn {
   display: inline-flex;
   align-items: center;
@@ -1256,6 +1450,20 @@ button {
   align-items: start;
 }
 
+.book-detail-grid.is-no-cover {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.book-editorial-note {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
 .book-detail-cover-col {
   display: flex;
   flex-direction: column;
@@ -1319,7 +1527,7 @@ button {
   margin-bottom: 14px;
 }
 
-.book-synopsis-box h4 {
+.book-synopsis-box > h4 {
   margin: 0 0 6px;
   font-size: 13px;
   text-transform: uppercase;
@@ -1327,10 +1535,43 @@ button {
   color: var(--royal-700);
 }
 
-.book-synopsis-box p {
-  margin: 0;
+.book-synopsis-content p {
+  margin: 0 0 8px;
   color: var(--text-main);
   line-height: 1.55;
+}
+
+.book-synopsis-content h3,
+.book-synopsis-content h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy-950);
+}
+
+.book-synopsis-content blockquote {
+  margin: 0 0 8px;
+  padding: 6px 12px;
+  border-left: 3px solid var(--gold-500);
+  background: #f1f5f9;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-style: italic;
+  color: var(--text-main);
+}
+
+.book-synopsis-content ul,
+.book-synopsis-content ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+  color: var(--text-main);
+  line-height: 1.55;
+}
+
+.book-synopsis-content p:last-child,
+.book-synopsis-content blockquote:last-child,
+.book-synopsis-content ul:last-child,
+.book-synopsis-content ol:last-child {
+  margin-bottom: 0;
 }
 
 .book-modal-actions {
@@ -2670,6 +2911,7 @@ button:disabled {
 }
 
 .form-field > span,
+.form-field > label > span,
 .field-head-row > span:first-child,
 .sub-mode-title {
   font-size: 12.5px;
@@ -2808,6 +3050,10 @@ button:disabled {
 .form-field textarea {
   min-height: 62px;
   resize: vertical;
+}
+
+.form-field .sub-text-panel textarea {
+  min-height: 110px;
 }
 
 .form-field-span2 {
@@ -3371,6 +3617,79 @@ button:disabled {
   color: var(--text-secondary);
 }
 
+.catalog-jump-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.catalog-jump-btn {
+  min-height: 40px;
+  padding: 0 11px;
+  font-size: 14px;
+}
+
+.catalog-type-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.catalog-type-section {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  scroll-margin-top: 12px;
+}
+
+.catalog-type-section .catalog-admin-grid {
+  margin-top: 0;
+}
+
+.catalog-type-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.catalog-type-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.catalog-type-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.catalog-type-title-row h3 {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 17px;
+  color: var(--navy-950);
+}
+
+.admin-section-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
 .admin-item-badges {
   display: inline-flex;
   align-items: center;
@@ -3391,6 +3710,19 @@ button:disabled {
   border-radius: 5px;
   border: 1px solid var(--border-subtle);
   background: var(--navy-900);
+  flex-shrink: 0;
+}
+
+.admin-book-no-cover {
+  width: 44px;
+  height: 54px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-muted);
+  color: var(--navy-900);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -3537,13 +3869,23 @@ button:disabled {
 
   .books-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(290px, 1fr);
+    grid-auto-rows: auto;
     gap: 12px;
+  }
+
+  .book-cover-stage {
+    height: 210px;
+  }
+
+  .antologi-novel-controls {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .models3d-grid,
   .mading-cards-grid,
-  .catalog-admin-grid {
+  .catalog-admin-grid,
+  .editorial-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -3612,7 +3954,8 @@ button:disabled {
 
   .models3d-grid,
   .mading-cards-grid,
-  .catalog-admin-grid {
+  .catalog-admin-grid,
+  .editorial-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -3706,10 +4049,32 @@ button:disabled {
     font-size: 10.5px;
   }
 
-  .toolbar-row {
+  .toolbar-row,
+  .antologi-global-bar,
+  .antologi-novel-controls {
     flex-direction: column;
     align-items: stretch;
     gap: 6px;
+  }
+
+  .antologi-jump-bar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .antologi-jump-chip {
+    justify-content: center;
+    text-align: center;
+    padding: 0 6px;
+  }
+
+  .antologi-section {
+    padding: 10px;
+  }
+
+  .antologi-novel-controls .toolbar-right {
+    justify-content: flex-end;
   }
 
   .filter-group,
@@ -3843,6 +4208,7 @@ button:disabled {
   .mading-cards-grid,
   .librarian-docs-grid,
   .catalog-admin-grid,
+  .editorial-cards-grid,
   .librarian-layout,
   .submission-layout,
   .admin-settings-split,
@@ -4063,6 +4429,38 @@ button:disabled {
     font-size: 10px;
   }
 
+  .antologi-global-bar {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
+  .antologi-jump-bar {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
+
+  .antologi-search-box {
+    flex: 1 1 150px;
+    min-width: 120px;
+  }
+
+  .antologi-section {
+    padding: 8px 10px;
+    gap: 7px;
+  }
+
+  .antologi-novel-controls {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .antologi-novel-controls::-webkit-scrollbar {
+    display: none;
+  }
+
   .toolbar-row {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -4135,6 +4533,8 @@ button:disabled {
   .book-cover-stage {
     flex: 0 0 84px;
     width: 84px;
+    height: auto;
+    min-height: 102px;
     padding: 4px;
     border-bottom: 0;
     border-right: 1px solid #e2e8f0;
@@ -4341,7 +4741,8 @@ button:disabled {
   .models3d-grid,
   .mading-cards-grid,
   .librarian-docs-grid,
-  .catalog-admin-grid {
+  .catalog-admin-grid,
+  .editorial-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -4357,12 +4758,17 @@ button:disabled {
     font-size: 25px;
   }
 
+  .antologi-sec-title {
+    font-size: 20px;
+  }
+
   .hub-tab {
     font-size: 15px;
     padding: 0 14px;
   }
 
-  .book-card-title {
+  .book-card-title,
+  .editorial-card-title {
     font-size: 17px;
   }
 }

@@ -30,6 +30,7 @@ export {
   validatePdfFile
 } from './submission-service.js';
 export {
+  BOOK_CATEGORIES,
   BOOK_ROLES,
   adminCreateBook,
   adminCreateModel3d,
@@ -44,7 +45,9 @@ export {
   adminSaveSetting,
   adminSignIn,
   adminSignOut,
-  adminUpdateWork
+  adminUpdateWork,
+  bookRequiresNovelDetails,
+  bookRequiresSynopsis
 } from './admin-service.js';
 export { compressCoverToWebp, uploadCoverImageToGDrive } from './media-upload.js';
 

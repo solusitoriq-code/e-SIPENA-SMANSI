@@ -74,18 +74,17 @@
 
     <!-- Kanvas Konten Utama 16:9 -->
     <main id="stage-main" class="stage-main">
-      <!-- Panel 1: Rak 12 Novel 2026 -->
+      <!-- Panel 1: Etalase Antologi (Novel, Cerpen, Puisi) -->
       <section class="hub-panel is-active" id="panel-rak" data-panel="rak" role="tabpanel" aria-labelledby="tab-rak">
         <div class="hero-strip">
           <div class="hero-copy">
             <p class="eyebrow">Perpustakaan Lentera Ilmu &amp; NLC</p>
-            <h1 class="hero-title">Etalase Antologi Novel</h1>
-            <!-- <p class="hero-subtitle">Karya sastra siswa dan guru SMA Negeri 1 Sidayu siap baca daring maupun luring.</p> -->
+            <h1 class="hero-title">Etalase Antologi</h1>
           </div>
           <div class="kpi-row" aria-label="Statistik program literasi sekolah">
             <div class="kpi-chip">
               <strong id="kpi-novels-2026">12</strong>
-              <span>Novel 2026</span>
+              <span>Karya Antologi</span>
             </div>
             <div class="kpi-chip">
               <strong id="kpi-books-2025">23</strong>
@@ -98,69 +97,119 @@
           </div>
         </div>
 
-        <div class="toolbar-row">
-          <div class="filter-group" role="group" aria-label="Saring penulis novel">
-            <button class="filter-chip is-active" type="button" data-role-filter="all">Semua (12)</button>
-            <button class="filter-chip" type="button" data-role-filter="Siswa XI">Siswa XI</button>
-            <button class="filter-chip" type="button" data-role-filter="Siswa XII">Siswa XII</button>
-            <button class="filter-chip" type="button" data-role-filter="Guru">Guru</button>
-            <button class="filter-chip" type="button" data-role-filter="Tendik" hidden>Tendik</button>
-            <button class="filter-chip" type="button" data-role-filter="Kepala Sekolah" hidden>Kepala Sekolah</button>
-          </div>
-          <div class="toolbar-right">
-            <label class="search-box" for="book-search-input">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                aria-hidden="true">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input id="book-search-input" type="search" placeholder="Cari judul atau penulis..." autocomplete="off">
-            </label>
-            <button class="page-btn page-size-toggle" id="btn-book-pagesize" type="button" aria-pressed="false"
-              aria-label="Ubah jumlah tampilan 4 atau 8 buku per halaman">4 / Hal</button>
-            <div class="pagination-box" id="books-pagination" aria-label="Paginasi rak buku">
-              <button class="page-btn page-nav-btn" id="btn-books-prev" type="button"
-                aria-label="Halaman buku sebelumnya">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+        <div class="antologi-global-bar">
+          <nav class="antologi-jump-bar" id="antologi-jump-bar" aria-label="Navigasi jenis antologi">
+            <button class="filter-chip antologi-jump-chip is-active" type="button" data-antologi-jump="novel">Novel (12)</button>
+            <button class="filter-chip antologi-jump-chip" type="button" data-antologi-jump="cerpen">Cerpen (0)</button>
+            <button class="filter-chip antologi-jump-chip" type="button" data-antologi-jump="puisi">Puisi (0)</button>
+          </nav>
+          <label class="search-box antologi-search-box" for="book-search-input">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input id="book-search-input" type="search" placeholder="Cari judul atau penulis..." autocomplete="off">
+          </label>
+        </div>
+
+        <div id="antologi-scroll-area" class="panel-body-scroll antologi-scroll-area">
+          <!-- Section 1: Novel -->
+          <section class="antologi-section antologi-section-novel" id="sec-antologi-novel" aria-labelledby="heading-sec-novel">
+            <div class="antologi-section-head">
+              <div class="antologi-sec-meta">
+                <div class="antologi-sec-title-row">
+                  <h2 id="heading-sec-novel" class="antologi-sec-title">Novel</h2>
+                  <span id="novel-count-badge" class="panel-badge">12 Karya</span>
+                </div>
+                <p class="antologi-sec-desc">Karya novel antologi siswa dan guru SMAN 1 Sidayu.</p>
+              </div>
+              <div class="antologi-novel-controls">
+                <div class="filter-group" role="group" aria-label="Saring penulis novel">
+                  <button class="filter-chip is-active" type="button" data-role-filter="all">Semua (12)</button>
+                  <button class="filter-chip" type="button" data-role-filter="Siswa XI">Siswa XI</button>
+                  <button class="filter-chip" type="button" data-role-filter="Siswa XII">Siswa XII</button>
+                  <button class="filter-chip" type="button" data-role-filter="Guru">Guru</button>
+                  <button class="filter-chip" type="button" data-role-filter="Tendik" hidden>Tendik</button>
+                  <button class="filter-chip" type="button" data-role-filter="Kepala Sekolah" hidden>Kepala Sekolah</button>
+                </div>
+                <div class="toolbar-right">
+                  <button class="page-btn page-size-toggle" id="btn-book-pagesize" type="button" aria-pressed="false"
+                    aria-label="Ubah jumlah tampilan 4 atau 8 buku per halaman">4 / Hal</button>
+                  <div class="pagination-box" id="books-pagination" aria-label="Paginasi rak novel">
+                    <button class="page-btn page-nav-btn" id="btn-books-prev" type="button"
+                      aria-label="Halaman novel sebelumnya">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                      </svg>
+                      <span class="page-btn-label">Sebelumnya</span>
+                    </button>
+                    <span class="page-indicator" id="books-page-info">Hal 1 / 3</span>
+                    <button class="page-btn page-nav-btn" id="btn-books-next" type="button"
+                      aria-label="Halaman novel berikutnya">
+                      <span class="page-btn-label">Berikutnya</span>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="books-shelf-stage">
+              <button id="btn-shelf-prev" class="shelf-edge-btn" type="button" aria-label="Halaman rak novel sebelumnya">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polyline points="15 18 9 12 15 6"></polyline>
                 </svg>
-                <span class="page-btn-label">Sebelumnya</span>
               </button>
-              <span class="page-indicator" id="books-page-info">Hal 1 / 3</span>
-              <button class="page-btn page-nav-btn" id="btn-books-next" type="button"
-                aria-label="Halaman buku berikutnya">
-                <span class="page-btn-label">Berikutnya</span>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+              <div id="books-grid" class="books-grid" aria-live="polite">
+                <article class="empty-stage-note">
+                  <h2>Etalase Novel</h2>
+                  <p>Memuat etalase novel SMAN 1 Sidayu...</p>
+                </article>
+              </div>
+              <button id="btn-shelf-next" class="shelf-edge-btn" type="button" aria-label="Halaman rak novel berikutnya">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
               </button>
             </div>
-          </div>
-        </div>
+            <div id="books-swipe-cue" class="swipe-cue-bar" aria-label="Indikator geser halaman rak novel" hidden></div>
+          </section>
 
-        <div class="books-shelf-stage">
-          <button id="btn-shelf-prev" class="shelf-edge-btn" type="button" aria-label="Halaman rak buku sebelumnya">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-          </button>
-          <div id="books-grid" class="books-grid" aria-live="polite">
-            <article class="empty-stage-note">
-              <h2>Etalase Novel Tahun 2026</h2>
-              <p>Memuat etalase novel SMAN 1 Sidayu...</p>
-            </article>
-          </div>
-          <button id="btn-shelf-next" class="shelf-edge-btn" type="button" aria-label="Halaman rak buku berikutnya">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
+          <!-- Section 2: Cerpen -->
+          <section class="antologi-section antologi-section-editorial" id="sec-antologi-cerpen" aria-labelledby="heading-sec-cerpen">
+            <div class="antologi-section-head">
+              <div class="antologi-sec-meta">
+                <div class="antologi-sec-title-row">
+                  <h2 id="heading-sec-cerpen" class="antologi-sec-title">Cerpen</h2>
+                  <span id="cerpen-count-badge" class="panel-badge">0 Karya</span>
+                </div>
+                <p class="antologi-sec-desc">Kumpulan cerita pendek warga SMAN 1 Sidayu.</p>
+              </div>
+            </div>
+            <div id="cerpen-grid" class="editorial-cards-grid" aria-live="polite"></div>
+          </section>
+
+          <!-- Section 3: Puisi -->
+          <section class="antologi-section antologi-section-editorial antologi-section-puisi" id="sec-antologi-puisi" aria-labelledby="heading-sec-puisi">
+            <div class="antologi-section-head">
+              <div class="antologi-sec-meta">
+                <div class="antologi-sec-title-row">
+                  <h2 id="heading-sec-puisi" class="antologi-sec-title">Puisi</h2>
+                  <span id="puisi-count-badge" class="panel-badge">0 Karya</span>
+                </div>
+                <p class="antologi-sec-desc">Antologi puisi pilihan warga SMAN 1 Sidayu.</p>
+              </div>
+            </div>
+            <div id="puisi-grid" class="editorial-cards-grid editorial-cards-puisi" aria-live="polite"></div>
+          </section>
         </div>
-        <div id="books-swipe-cue" class="swipe-cue-bar" aria-label="Indikator geser halaman rak buku" hidden></div>
       </section>
 
       <!-- Panel 2: Pameran 3D Gresik -->
@@ -250,7 +299,7 @@
         <div class="panel-header">
           <div>
             <p class="eyebrow">Partisipasi</p>
-            <h2 id="kirim-panel-title" class="panel-title">Kirim Karya PDF &amp; Lacak Kode</h2>
+            <h2 id="kirim-panel-title" class="panel-title">Kirim Karya &amp; Lacak Kode</h2>
           </div>
           <div class="panel-header-actions">
             <span class="panel-badge">Format PDF Maks. 3 MB</span>
@@ -330,7 +379,7 @@
       <div class="drawer-links" id="drawer-links">
         <span class="drawer-group-label">Portal Pembaca</span>
         <button class="drawer-item is-active" type="button" data-drawer-tab="rak" id="tab-rak"
-          aria-current="page">Etalase Novel 2026</button>
+          aria-current="page">Etalase Antologi</button>
         <button class="drawer-item" type="button" data-drawer-tab="pameran-3d" id="tab-pameran3d">Pameran 3D
           Gresik</button>
         <button class="drawer-item" type="button" data-drawer-tab="mading" id="tab-mading">Mading Digital</button>

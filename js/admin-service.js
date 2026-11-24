@@ -15,9 +15,18 @@ import {
   slugifyTitle
 } from './service-helpers.js';
 import { getLocalSubmissions, removeLocalSubmissionByCode, saveLocalSubmission } from './submission-service.js';
+import { extractPlainLiteraryText } from './ui-utils.js';
 
 export { adminGetSession, adminSignIn, adminSignOut };
 export const BOOK_ROLES = Object.freeze(['Siswa XI', 'Siswa XII', 'Guru', 'Tendik', 'Kepala Sekolah']);
+export const BOOK_CATEGORIES = Object.freeze(['Novel', 'Cerpen', 'Puisi']);
+const EDITORIAL_ONLY_CATEGORIES = new Set(['cerpen', 'puisi']);
+
+export function bookRequiresNovelDetails(category = 'Novel') {
+  return !EDITORIAL_ONLY_CATEGORIES.has(String(category || '').trim().toLowerCase());
+}
+
+export const bookRequiresSynopsis = bookRequiresNovelDetails;
 
 export async function adminListWorks({
   status = 'all',
@@ -118,13 +127,19 @@ export async function adminCreateBook(input = {}) {
   if (!session) throw new Error('Sesi kurator belum aktif.');
 
   const title = String(input.title || '').trim();
-  const authorName = String(input.author_name || '').trim();
-  const authorRole = String(input.author_role || '').trim();
-  const synopsis = String(input.synopsis || '').trim();
+  const category = String(input.category || 'Novel').trim() || 'Novel';
+  const needNovelDetails = bookRequiresNovelDetails(category);
+  const authorName = needNovelDetails ? String(input.author_name || '').trim() : '';
+  const rawRole = String(input.author_role || '').trim();
+  const authorRole = needNovelDetails ? rawRole : BOOK_ROLES.includes(rawRole) ? rawRole : 'Siswa XI';
+  const rawSynopsis = String(input.synopsis || '').trim();
+  const synopsis = needNovelDetails ? rawSynopsis : '';
   if (!title) throw new Error('Judul buku wajib diisi.');
-  if (!authorName) throw new Error('Nama penulis wajib diisi.');
-  if (!BOOK_ROLES.includes(authorRole)) throw new Error('Peran penulis buku tidak valid.');
-  if (!synopsis) throw new Error('Sinopsis buku wajib diisi.');
+  if (needNovelDetails && !authorName) throw new Error('Nama penulis wajib diisi.');
+  if (needNovelDetails && !BOOK_ROLES.includes(authorRole)) throw new Error('Peran penulis buku tidak valid.');
+  if (needNovelDetails && (!synopsis || !extractPlainLiteraryText(synopsis))) {
+    throw new Error('Sinopsis buku wajib diisi.');
+  }
 
   const gdrive = normalizeGDriveInput(input.gdrive_file_id, input.gdrive_preview_url);
   const record = {
@@ -132,11 +147,11 @@ export async function adminCreateBook(input = {}) {
     title,
     author_name: authorName,
     author_role: authorRole,
-    author_class: String(input.author_class || '').trim(),
+    author_class: needNovelDetails ? String(input.author_class || '').trim() : '',
     publication_year: Number(input.publication_year || 2026) || 2026,
-    category: String(input.category || 'Novel').trim() || 'Novel',
+    category,
     synopsis,
-    cover_url: String(input.cover_url || '').trim() || 'assets/images/logo-smansi.webp',
+    cover_url: needNovelDetails ? String(input.cover_url || '').trim() || 'assets/images/logo-smansi.webp' : '',
     gdrive_file_id: gdrive.fileId,
     gdrive_preview_url: gdrive.previewUrl,
     qrcbn_code: String(input.qrcbn_code || '').trim(),
@@ -171,6 +186,20 @@ export async function adminSaveBook(bookId, updates = {}) {
   const strFields = ['title', 'author_name', 'author_role', 'author_class', 'category', 'synopsis', 'cover_url', 'qrcbn_code'];
   for (const f of strFields) {
     if (updates[f] !== undefined) payload[f] = String(updates[f]).trim();
+  }
+  const needNovelDetails = bookRequiresNovelDetails(payload.category !== undefined ? payload.category : 'Novel');
+  if (!needNovelDetails) {
+    payload.author_name = '';
+    payload.author_class = '';
+    payload.cover_url = '';
+    payload.synopsis = '';
+    if (!BOOK_ROLES.includes(payload.author_role)) payload.author_role = 'Siswa XI';
+  }
+  if (needNovelDetails && payload.author_name !== undefined && !payload.author_name) {
+    throw new Error('Nama penulis wajib diisi.');
+  }
+  if (needNovelDetails && payload.synopsis !== undefined && (!payload.synopsis || !extractPlainLiteraryText(payload.synopsis))) {
+    throw new Error('Sinopsis buku wajib diisi.');
   }
   if (updates.publication_year !== undefined) payload.publication_year = Number(updates.publication_year || 2026) || 2026;
   if (updates.sort_order !== undefined) payload.sort_order = Number(updates.sort_order || 0) || 0;

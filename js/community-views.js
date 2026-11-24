@@ -53,7 +53,6 @@ export function renderModels3dPanel(container, { models = [] } = {}) {
               <span class="culture-index">Koleksi ${idx + 1}</span>
             </div>
             <h3 class="model3d-card-title">${safeTitle}</h3>
-            <p class="model3d-card-intro">${escapeHtml(item.introduction || '')}</p>
             <div class="model3d-card-actions">
               <button type="button" class="primary-btn inline-action-btn" data-action="open-model-3d" data-model-id="${safeId}">${createIcon('cube')}<span>Lihat 3D &amp; AR</span></button>
             </div>
@@ -62,6 +61,7 @@ export function renderModels3dPanel(container, { models = [] } = {}) {
       `;
     })
     .join('')}</div>`;
+  {/* <p class="model3d-card-intro">${escapeHtml(item.introduction || '')}</p> */ }
 
   container.onclick = (event) => {
     const target = event.target instanceof HTMLElement ? event.target : null;

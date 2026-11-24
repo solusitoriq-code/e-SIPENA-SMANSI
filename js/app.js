@@ -6,19 +6,10 @@
 import { APP_CONFIG } from './config.js';
 import { playSfx, stopSpeech } from './audio.js';
 import { incrementBookLike, loadPortalData } from './data-service.js';
+import { bindHorizontalSwipe, bindKeyboardAndModalControls, bindTopHudAndDrawer, updateAudioButtonUi } from './nav-controls.js';
 import {
-  bindHorizontalSwipe,
-  bindKeyboardAndModalControls,
-  bindTopHudAndDrawer,
-  updateAudioButtonUi
-} from './nav-controls.js';
-import {
-  openBookModal,
-  renderBooksShelf,
-  renderLibrarianPanel,
-  renderMadingPanel,
-  renderModels3dPanel,
-  updateHeroKpis
+  openBookModal, renderAntologiSections, renderLibrarianPanel,
+  renderMadingPanel, renderModels3dPanel, updateHeroKpis
 } from './public-views.js';
 import { renderSubmissionPanel } from './submission-views.js';
 import { renderAdminPanel } from './admin-views.js';
@@ -43,14 +34,6 @@ const appState = {
   }
 };
 
-function updateConnectionBadge(source) {
-  const badge = document.getElementById('connection-badge');
-  if (!badge) return;
-  const online = source === 'supabase';
-  badge.classList.toggle('is-online', online);
-  badge.textContent = online ? 'Terhubung Supabase' : 'Mode Offline';
-}
-
 function triggerSwipeAnim(el, dir) {
   if (!el) return;
   el.classList.remove('is-swipe-next', 'is-swipe-prev');
@@ -61,8 +44,14 @@ function triggerSwipeAnim(el, dir) {
 
 function renderBooksSection() {
   const gridEl = document.getElementById('books-grid');
-  const result = renderBooksShelf({
+  const result = renderAntologiSections({
     gridEl,
+    cerpenGridEl: document.getElementById('cerpen-grid'),
+    puisiGridEl: document.getElementById('puisi-grid'),
+    jumpBarEl: document.getElementById('antologi-jump-bar'),
+    novelCountEl: document.getElementById('novel-count-badge'),
+    cerpenCountEl: document.getElementById('cerpen-count-badge'),
+    puisiCountEl: document.getElementById('puisi-count-badge'),
     pageInfoEl: document.getElementById('books-page-info'),
     prevBtn: document.getElementById('btn-books-prev'),
     nextBtn: document.getElementById('btn-books-next'),
@@ -93,7 +82,7 @@ function renderBooksSection() {
         playSfx(res.alreadyLiked ? 'click' : 'success');
         showToast(
           res.alreadyLiked
-            ? 'Anda sudah menyukai novel ini pada perangkat ini.'
+            ? 'Anda sudah menyukai karya ini pada perangkat ini.'
             : `Apresiasi untuk "${book.title}" ditambahkan.`,
           res.alreadyLiked ? 'info' : 'success'
         );
@@ -372,7 +361,6 @@ async function initApp() {
   }
 
   appState.snapshot = await loadPortalData();
-  // updateConnectionBadge(appState.snapshot.source);
   renderAllPublicPanels();
   handleInitialDeepLink();
 }
@@ -382,7 +370,6 @@ window.ESIPENA_APP = {
   switchTab,
   refreshData: async () => {
     appState.snapshot = await loadPortalData({ forceRefresh: true });
-    // updateConnectionBadge(appState.snapshot.source);
     renderAllPublicPanels();
   }
 };

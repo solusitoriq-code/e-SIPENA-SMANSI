@@ -6,10 +6,91 @@
 
 import { APP_CONFIG } from './config.js';
 import { playSfx } from './audio.js';
-import { adminSaveSetting } from './data-service.js';
+import { BOOK_CATEGORIES, adminSaveSetting } from './data-service.js';
 import { openBookEditorModal } from './admin-book-modal.js';
 import { openLibrarianDocModal, openModel3dEditorModal } from './admin-catalog-modals.js';
 import { createIcon, escapeHtml, resolveGDriveLinks, showToast } from './ui-utils.js';
+
+const BOOK_SECTION_META = Object.freeze({
+  Novel: 'Koleksi buku novel karya warga sekolah.',
+  Cerpen: 'Koleksi buku dan antologi cerita pendek.',
+  Puisi: 'Koleksi buku dan antologi puisi.'
+});
+
+function groupBooksByCategory(books = []) {
+  const buckets = Object.fromEntries(BOOK_CATEGORIES.map((cat) => [cat, []]));
+  const lookup = new Map(BOOK_CATEGORIES.map((cat) => [cat.toLowerCase(), cat]));
+  const others = [];
+
+  for (const book of books) {
+    const raw = String(book?.category || 'Novel').trim();
+    const canonical = raw ? lookup.get(raw.toLowerCase()) : 'Novel';
+    if (canonical) buckets[canonical].push(book);
+    else others.push(book);
+  }
+  return { buckets, others };
+}
+
+function renderBookAdminCard(book, { showCategory = false } = {}) {
+  const gdrive = resolveGDriveLinks(book);
+  const hiddenBadge = book.is_published === false ? '<span class="status-badge status-rejected">Disembunyikan</span>' : '';
+  const catBadge = showCategory && book.category ? `<span class="panel-badge">${escapeHtml(book.category)}</span>` : '';
+  const hasAuthor = Boolean(String(book.author_name || '').trim());
+  const hasCover = Boolean(String(book.cover_url || '').trim());
+  const metaLabel = hasAuthor
+    ? `${escapeHtml(book.author_name)}${book.author_role ? ` (${escapeHtml(book.author_role)})` : ''}`
+    : `${escapeHtml(book.category || 'Antologi')} &middot; Tahun ${escapeHtml(book.publication_year || 2026)}`;
+  const thumbHtml = hasCover
+    ? `<img class="admin-book-thumb" src="${escapeHtml(book.cover_url)}" alt="" width="44" height="62" loading="lazy" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">`
+    : `<div class="admin-book-no-cover" aria-hidden="true">${createIcon('book')}</div>`;
+  return `
+    <article class="admin-item-card">
+      <div class="admin-item-top">
+        <span class="panel-badge">#${escapeHtml(book.sort_order ?? '-')}</span>
+        <div class="admin-item-badges">
+          ${catBadge}
+          ${hiddenBadge}
+          <span class="status-badge ${gdrive.hasDriveFile ? 'status-approved' : 'status-wait'}">${gdrive.hasDriveFile ? 'PDF Ada' : 'PDF Kosong'}</span>
+        </div>
+      </div>
+      <div class="admin-book-row">
+        ${thumbHtml}
+        <div>
+          <h4>${escapeHtml(book.title)}</h4>
+          <p class="admin-item-meta">${metaLabel}</p>
+        </div>
+      </div>
+      <button type="button" class="secondary-btn inline-action-btn" data-edit-book="${escapeHtml(book.id)}">${createIcon('book')}<span>${hasCover ? 'Sunting Buku &amp; Sampul' : 'Sunting Karya'}</span></button>
+    </article>
+  `;
+}
+
+function renderBookCategorySection(category, items, { note, allowAdd = true, showCategory = false } = {}) {
+  const slug = category.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return `
+    <section class="catalog-type-section" id="catalog-sec-${escapeHtml(slug)}">
+      <div class="catalog-type-head">
+        <div class="catalog-type-title-wrap">
+          <div class="catalog-type-title-row">
+            <h3>${escapeHtml(category)}</h3>
+            <span class="panel-badge">${items.length} Buku</span>
+          </div>
+          <p class="admin-section-note">${escapeHtml(note)}</p>
+        </div>
+        ${allowAdd ? `<button type="button" class="primary-btn admin-row-btn" data-add-book-cat="${escapeHtml(category)}">+ Tambah ${escapeHtml(category)}</button>` : ''}
+      </div>
+      ${
+        items.length
+          ? `<div class="catalog-admin-grid">${items.map((book) => renderBookAdminCard(book, { showCategory })).join('')}</div>`
+          : `<p class="admin-section-empty">Belum ada buku pada jenis ${escapeHtml(category)}.</p>`
+      }
+    </section>
+  `;
+}
+
+function getNextSortOrder(items = []) {
+  return items.reduce((max, item) => Math.max(max, Number(item?.sort_order || 0)), 0) + 1;
+}
 
 export function renderCatalogManager(
   container,
@@ -25,42 +106,36 @@ export function renderCatalogManager(
   const docs = Array.isArray(corner.documents) ? corner.documents : [];
 
   const section = ['books', 'models3d', 'settings'].includes(subSection) ? subSection : 'books';
-  const nextBookOrder = books.reduce((m, b) => Math.max(m, Number(b.sort_order || 0)), 0) + 1;
-  const nextModelOrder = models3d.reduce((m, item) => Math.max(m, Number(item.sort_order || 0)), 0) + 1;
+  const groupedBooks = groupBooksByCategory(books);
+  const nextOrderByCategory = Object.fromEntries(
+    BOOK_CATEGORIES.map((cat) => [cat, getNextSortOrder(groupedBooks.buckets[cat])])
+  );
+  const nextModelOrder = getNextSortOrder(models3d);
 
   let bodyHtml = '';
   if (section === 'books') {
     bodyHtml = `
       <div class="admin-section-bar">
-        <p class="admin-section-note">Kelola judul, penulis, gambar sampul, sinopsis, dan PDF Google Drive.</p>
-        <button type="button" class="primary-btn" id="btn-admin-add-book">+ Tambah Buku / Novel</button>
+        <p class="admin-section-note">Kelola judul, penulis, sampul, sinopsis, dan PDF berdasarkan jenis karya.</p>
+        <div class="catalog-jump-pills" aria-label="Lompat ke jenis buku">
+          ${BOOK_CATEGORIES.map((cat) => `<button type="button" class="secondary-btn catalog-jump-btn" data-jump-cat="${escapeHtml(cat)}">${escapeHtml(cat)} (${groupedBooks.buckets[cat].length})</button>`).join('')}
+        </div>
       </div>
-      <div class="catalog-admin-grid">
-        ${books
-        .map((book) => {
-          const gdrive = resolveGDriveLinks(book);
-          const hiddenBadge = book.is_published === false ? '<span class="status-badge status-rejected">Disembunyikan</span>' : '';
-          return `
-              <article class="admin-item-card">
-                <div class="admin-item-top">
-                  <span class="panel-badge">#${escapeHtml(book.sort_order ?? '-')}</span>
-                  <div class="admin-item-badges">
-                    ${hiddenBadge}
-                    <span class="status-badge ${gdrive.hasDriveFile ? 'status-approved' : 'status-wait'}">${gdrive.hasDriveFile ? 'PDF Ada' : 'PDF Kosong'}</span>
-                  </div>
-                </div>
-                <div class="admin-book-row">
-                  <img class="admin-book-thumb" src="${escapeHtml(book.cover_url || 'assets/images/logo-smansi.webp')}" alt="" width="44" height="62" loading="lazy" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
-                  <div>
-                    <h4>${escapeHtml(book.title)}</h4>
-                    <p class="admin-item-meta">${escapeHtml(book.author_name)} (${escapeHtml(book.author_role)})</p>
-                  </div>
-                </div>
-                <button type="button" class="secondary-btn inline-action-btn" data-edit-book="${escapeHtml(book.id)}">${createIcon('book')}<span>Sunting Buku &amp; Sampul</span></button>
-              </article>
-            `;
-        })
-        .join('')}
+      <div class="catalog-type-stack">
+        ${BOOK_CATEGORIES.map((cat) =>
+          renderBookCategorySection(cat, groupedBooks.buckets[cat], {
+            note: BOOK_SECTION_META[cat] || `Koleksi buku ${cat}.`
+          })
+        ).join('')}
+        ${
+          groupedBooks.others.length
+            ? renderBookCategorySection('Kategori Lainnya', groupedBooks.others, {
+                note: 'Buku dengan kategori di luar Novel, Cerpen, dan Puisi.',
+                allowAdd: false,
+                showCategory: true
+              })
+            : ''
+        }
       </div>
     `;
   } else if (section === 'models3d') {
@@ -187,9 +262,26 @@ export function renderCatalogManager(
       return;
     }
 
-    if (target.closest('#btn-admin-add-book')) {
+    const addBookBtn = target.closest('[data-add-book-cat]');
+    if (addBookBtn instanceof HTMLElement) {
+      const cat = addBookBtn.dataset.addBookCat || 'Novel';
       playSfx('pop');
-      openBookEditorModal(null, onUpdated, { nextSortOrder: nextBookOrder });
+      openBookEditorModal(null, onUpdated, {
+        nextSortOrder: nextOrderByCategory[cat] || 1,
+        nextOrderByCategory,
+        defaultCategory: cat
+      });
+      return;
+    }
+
+    const jumpBtn = target.closest('[data-jump-cat]');
+    if (jumpBtn instanceof HTMLElement) {
+      const catSlug = String(jumpBtn.dataset.jumpCat || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const secEl = container.querySelector(`#catalog-sec-${catSlug}`);
+      if (secEl instanceof HTMLElement) {
+        playSfx('click');
+        secEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       return;
     }
 
@@ -209,8 +301,12 @@ export function renderCatalogManager(
     if (bookBtn instanceof HTMLElement) {
       const book = books.find((b) => String(b.id) === bookBtn.dataset.editBook);
       if (book) {
+        const bookCat = BOOK_CATEGORIES.find((c) => c.toLowerCase() === String(book.category || 'Novel').trim().toLowerCase()) || 'Novel';
         playSfx('pop');
-        openBookEditorModal(book, onUpdated, { nextSortOrder: nextBookOrder });
+        openBookEditorModal(book, onUpdated, {
+          nextSortOrder: nextOrderByCategory[bookCat] || 1,
+          nextOrderByCategory
+        });
       }
       return;
     }
@@ -259,7 +355,7 @@ export function renderCatalogManager(
         ...kpi,
         books_2025_count: Number(container.querySelector('#adm-kpi-2025')?.value || 23),
         novels_2026_count: books.filter((b) => b.is_published !== false).length,
-        cultural_topics_count: topics.filter((t) => t.is_active !== false).length
+        cultural_topics_count: models3d.filter((m) => m.is_active !== false).length
       };
 
       await Promise.all([

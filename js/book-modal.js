@@ -13,8 +13,10 @@ import {
   buildWhatsAppUrl,
   createIcon,
   escapeHtml,
+  extractPlainLiteraryText,
   getRoleBadgeClass,
   openModal,
+  renderFormattedLiteraryHtml,
   resolveGDriveLinks,
   showToast
 } from './ui-utils.js';
@@ -46,13 +48,16 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
 
   const gdrive = resolveGDriveLinks(book);
   const contactAdmin = siteSettings.contact_admin || {};
-  const waUrl = buildWhatsAppUrl(
-    contactAdmin,
-    `"${book.title}" karya ${book.author_name} (${book.author_role}${book.author_class ? ` ${book.author_class}` : ''}).`
-  );
+  const hasCover = Boolean(String(book.cover_url || '').trim());
+  const hasAuthor = Boolean(String(book.author_name || '').trim());
+  const authorNote = hasAuthor
+    ? ` karya ${book.author_name} (${book.author_role}${book.author_class ? ` ${book.author_class}` : ''})`
+    : ` (${book.category || 'Antologi'} ${book.publication_year || 2026})`;
+  const waUrl = buildWhatsAppUrl(contactAdmin, `"${book.title}"${authorNote}.`);
   const liked = hasLikedBook(book.id);
   const readerPrefs = getReaderPrefs();
   const textContent = getTextReaderContent(book);
+  const hasSynopsis = Boolean(extractPlainLiteraryText(book.synopsis || ''));
 
   const canTryPdf = gdrive.hasDriveFile;
   const startSection = initialMode === 'read' ? 'reader' : 'detail';
@@ -77,28 +82,30 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
     html: `
       <div class="book-modal-shell">
         <section class="book-modal-pane${startSection === 'detail' ? ' is-active' : ''}" data-pane="detail" ${startSection === 'detail' ? '' : 'hidden'}>
-          <div class="book-detail-grid">
-            <div class="book-detail-cover-col">
-              <div class="book-cover-3d book-cover-modal">
-                <img src="${escapeHtml(book.cover_url || FALLBACK_COVER)}" alt="Sampul ${escapeHtml(book.title)}" width="296" height="420" onerror="this.onerror=null;this.src='${FALLBACK_COVER}'">
-              </div>
-            </div>
+          <div class="book-detail-grid${hasCover ? '' : ' is-no-cover'}">
+            ${
+              hasCover
+                ? `<div class="book-detail-cover-col"><div class="book-cover-3d book-cover-modal"><img src="${escapeHtml(book.cover_url)}" alt="Sampul ${escapeHtml(book.title)}" width="296" height="420" onerror="this.onerror=null;this.src='${FALLBACK_COVER}'"></div></div>`
+                : ''
+            }
             <div class="book-detail-info-col">
               <div class="book-meta-row">
-                <span class="${getRoleBadgeClass(book.author_role)}">${escapeHtml(book.author_role)}</span>
-                ${book.author_class ? `<span class="panel-badge">${escapeHtml(book.author_class)}</span>` : ''}
+                ${hasAuthor && book.author_role ? `<span class="${getRoleBadgeClass(book.author_role)}">${escapeHtml(book.author_role)}</span>` : ''}
+                ${book.category ? `<span class="panel-badge">${escapeHtml(book.category)}</span>` : ''}
+                ${hasAuthor && book.author_class ? `<span class="panel-badge">${escapeHtml(book.author_class)}</span>` : ''}
                 <span class="panel-badge">Tahun ${escapeHtml(book.publication_year || 2026)}</span>
                 ${book.qrcbn_code ? `<span class="panel-badge">${/^(978|979)\d{10}$/.test(String(book.qrcbn_code).replaceAll('-', '').trim()) || /^\d{9}[\dX]$/i.test(String(book.qrcbn_code).replaceAll('-', '').trim()) ? 'ISBN' : 'ISBN/QRCBN'}: ${escapeHtml(book.qrcbn_code)}</span>` : ''}
               </div>
               <h3 class="book-modal-title">${escapeHtml(book.title)}</h3>
-              <p class="book-modal-author">Penulis: <strong>${escapeHtml(book.author_name)}</strong></p>
-              <div class="book-synopsis-box">
-                <h4>Sinopsis Karya</h4>
-                <p>${escapeHtml(book.synopsis || 'Sinopsis belum tersedia.')}</p>
-              </div>
+              ${hasAuthor ? `<p class="book-modal-author">Penulis: <strong>${escapeHtml(book.author_name)}</strong></p>` : ''}
+              ${
+                hasSynopsis
+                  ? `<div class="book-synopsis-box"><h4>Sinopsis Karya</h4><div class="book-synopsis-content">${renderFormattedLiteraryHtml(book.synopsis, '')}</div></div>`
+                  : '<p class="book-editorial-note">Koleksi antologi SMA Negeri 1 Sidayu. Klik Baca Buku untuk membuka naskah.</p>'
+              }
               <div class="book-modal-actions">
                 <button type="button" class="primary-btn inline-action-btn" id="btn-switch-to-reader">${createIcon('book')}<span>${canTryPdf ? 'Baca Buku (PDF)' : 'Baca Buku'}</span></button>
-                <button type="button" class="secondary-btn inline-action-btn" id="btn-book-tts">${createIcon('volume')}<span>Dengar Sinopsis</span></button>
+                ${hasSynopsis ? `<button type="button" class="secondary-btn inline-action-btn" id="btn-book-tts">${createIcon('volume')}<span>Dengar Sinopsis</span></button>` : ''}
                 <button type="button" class="like-pill-btn modal-like-btn${liked ? ' is-liked' : ''}" id="btn-modal-like" aria-pressed="${liked ? 'true' : 'false'}">${createIcon('heart')}<span id="modal-like-label">${liked ? 'Disukai' : 'Suka'} (${Number(book.likes_count || 0)})</span></button>
                 <a class="whatsapp-btn inline-action-btn" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('whatsapp')}<span>Pesan Cetak via WA</span></a>
               </div>
@@ -206,7 +213,7 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
     pageInfoEl: bodyEl.querySelector('#text-page-info'),
     dotsEl: bodyEl.querySelector('#text-slide-dots'),
     title: book.title || 'Novel',
-    subtitle: textContent.isFullText ? 'Teks Lengkap (Offline)' : 'Sinopsis Buku (Offline)',
+    subtitle: textContent.isFullText ? 'Teks Lengkap (Offline)' : hasSynopsis ? 'Sinopsis Buku (Offline)' : book.category || 'Karya',
     rawText: textContent.rawContent
   });
 
@@ -230,7 +237,12 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
     if (span) span.textContent = isDark ? 'Tema Kertas' : 'Tema Gelap';
   });
 
-  bindSpeechToggleButton(bodyEl.querySelector('#btn-book-tts'), () => `${book.title}, karya ${book.author_name}. ${book.synopsis || ''}`, 'Dengar Sinopsis', 'Hentikan Audio');
+  bindSpeechToggleButton(
+    bodyEl.querySelector('#btn-book-tts'),
+    () => `${book.title}${hasAuthor ? `, karya ${book.author_name}` : ''}. ${extractPlainLiteraryText(book.synopsis || '')}`,
+    'Dengar Sinopsis',
+    'Hentikan Audio'
+  );
   bindSpeechToggleButton(bodyEl.querySelector('#btn-reader-tts'), () => `${book.title}. ${slideReader.getCurrentPageText()}`, 'Dengar Teks', 'Hentikan Audio');
 
   const likeBtn = bodyEl.querySelector('#btn-modal-like');

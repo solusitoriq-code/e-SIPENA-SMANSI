@@ -7,27 +7,15 @@
 import { APP_CONFIG } from './config.js';
 import { playSfx } from './audio.js';
 import {
-  BOOK_ROLES,
-  adminCreateBook,
-  adminDeleteBook,
-  adminSaveBook,
-  compressCoverToWebp,
-  validatePdfFile
+  BOOK_CATEGORIES, BOOK_ROLES, adminCreateBook, adminDeleteBook,
+  adminSaveBook, bookRequiresNovelDetails, compressCoverToWebp, validatePdfFile
 } from './data-service.js';
 import { mountBookBarcodeScanner } from './barcode-scanner.js';
+import { bindLiteraryEditor, extractPlainLiteraryText, renderLiteraryEditorHtml } from './literary-editor.js';
 import { uploadBookPendingAssets } from './media-upload.js';
-import {
-  closeModal,
-  createIcon,
-  escapeHtml,
-  openModal,
-  resolveGDriveLinks,
-  setModalBusy,
-  showToast
-} from './ui-utils.js';
+import { closeModal, createIcon, escapeHtml, openModal, resolveGDriveLinks, setModalBusy, showToast } from './ui-utils.js';
 
 const FALLBACK_COVER = 'assets/images/logo-smansi.webp';
-const BOOK_CATEGORIES = ['Novel', 'Cerpen', 'Puisi'];
 
 function formatFileSizeLabel(bytes) {
   const num = Number(bytes || 0);
@@ -46,16 +34,19 @@ async function syncAfterBookChange(onUpdated) {
  * Membuka modal untuk menambah buku baru (book = null) atau menyunting/menghapus buku yang ada.
  * @param {Record<string, any> | null} book
  * @param {() => Promise<void> | void} onUpdated
- * @param {{ nextSortOrder?: number }} [options]
+ * @param {{ nextSortOrder?: number, defaultCategory?: string, nextOrderByCategory?: Record<string, number> | null }} [options]
  */
-export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}) {
+export function openBookEditorModal(book, onUpdated, { nextSortOrder = 1, defaultCategory = 'Novel', nextOrderByCategory = null } = {}) {
   const isNew = !book;
   const gdrive = resolveGDriveLinks(book || {});
-  const currentCat = book?.category || 'Novel';
+  const fallbackCat = BOOK_CATEGORIES.includes(defaultCategory) ? defaultCategory : 'Novel';
+  const currentCat = book?.category || fallbackCat;
   const catOptions = BOOK_CATEGORIES.includes(currentCat) ? BOOK_CATEGORIES : [currentCat, ...BOOK_CATEGORIES];
+  const getOrderForCat = (cat) => Number(nextOrderByCategory?.[cat] || nextSortOrder || 1);
+  const initialNovelDetails = bookRequiresNovelDetails(currentCat);
   const maxCatalogMb = Math.round(APP_CONFIG.MAX_CATALOG_PDF_SIZE_BYTES / (1024 * 1024));
 
-  let selectedCoverUrl = book?.cover_url || FALLBACK_COVER;
+  let selectedCoverUrl = book?.cover_url || (initialNovelDetails ? FALLBACK_COVER : '');
   let pendingCoverFile = null;
   let selectedDriveId = book?.gdrive_file_id || gdrive.fileId || '';
   let selectedPreviewUrl = book?.gdrive_preview_url || gdrive.previewUrl || '';
@@ -64,14 +55,14 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
   let barcodeScanner = null;
 
   const bodyEl = openModal({
-    title: isNew ? 'Tambah Novel / Buku Baru' : `Sunting Buku: ${book.title}`,
+    title: isNew ? `Tambah ${fallbackCat} Baru` : `Sunting Buku: ${book.title}`,
     wide: true,
     onClose: () => barcodeScanner?.stopCamera(),
     html: `
       <form id="admin-book-form" class="admin-modal-form">
-        <div class="book-editor-cover-row">
+        <div class="book-editor-cover-row" data-novel-only="true"${initialNovelDetails ? '' : ' hidden'}>
           <div class="book-cover-preview-box">
-            <img id="adm-book-cover-preview" src="${escapeHtml(selectedCoverUrl)}" alt="Pratinjau sampul buku" width="74" height="105" onerror="this.onerror=null;this.src='${FALLBACK_COVER}'">
+            <img id="adm-book-cover-preview" src="${escapeHtml(selectedCoverUrl || FALLBACK_COVER)}" alt="Pratinjau sampul buku" width="74" height="105" onerror="this.onerror=null;this.src='${FALLBACK_COVER}'">
           </div>
           <div class="book-cover-controls">
             <div class="file-picker-row">
@@ -84,20 +75,20 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
 
         <div class="admin-form-grid">
           <label class="form-field form-field-span2">
-            <span>Judul Buku / Novel *</span>
+            <span>Judul Karya / Buku *</span>
             <input id="adm-book-title" type="text" value="${escapeHtml(book?.title || '')}" required maxlength="140">
           </label>
-          <label class="form-field">
+          <label class="form-field" data-novel-only="true"${initialNovelDetails ? '' : ' hidden'}>
             <span>Nama Penulis *</span>
-            <input id="adm-book-author" type="text" value="${escapeHtml(book?.author_name || '')}" required maxlength="100">
+            <input id="adm-book-author" type="text" value="${escapeHtml(book?.author_name || '')}" ${initialNovelDetails ? 'required' : ''} maxlength="100">
           </label>
-          <label class="form-field">
+          <label class="form-field" data-novel-only="true"${initialNovelDetails ? '' : ' hidden'}>
             <span>Peran Penulis *</span>
-            <select id="adm-book-role" required>
+            <select id="adm-book-role" ${initialNovelDetails ? 'required' : ''}>
               ${BOOK_ROLES.map((r) => `<option value="${escapeHtml(r)}"${r === (book?.author_role || 'Siswa XI') ? ' selected' : ''}>${escapeHtml(r)}</option>`).join('')}
             </select>
           </label>
-          <label class="form-field">
+          <label class="form-field" data-novel-only="true"${initialNovelDetails ? '' : ' hidden'}>
             <span>Kelas / Mapel / Unit</span>
             <input id="adm-book-class" type="text" value="${escapeHtml(book?.author_class || '')}" placeholder="Mis. XI-7 / Bahasa Indonesia">
           </label>
@@ -127,7 +118,7 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
           </div>
           <label class="form-field">
             <span>Urutan Tampil di Rak</span>
-            <input id="adm-book-order" type="number" min="1" max="999" value="${escapeHtml(book?.sort_order ?? nextSortOrder)}">
+            <input id="adm-book-order" type="number" min="1" max="999" value="${escapeHtml(book?.sort_order ?? getOrderForCat(currentCat))}">
           </label>
           <div class="form-field">
             <span>Visibilitas Katalog</span>
@@ -147,10 +138,16 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
             <p id="adm-book-pdf-status" class="file-status-text${hasInitialPdf ? ' is-ok' : ''}">${hasInitialPdf ? 'Berkas PDF buku sudah terpasang.' : `Belum ada berkas PDF. Pilih berkas .pdf maks. ${maxCatalogMb} MB (diunggah saat Simpan).`}</p>
           </div>
 
-          <label class="form-field form-field-span2">
-            <span>Sinopsis Buku *</span>
-            <textarea id="adm-book-synopsis" rows="3" required>${escapeHtml(book?.synopsis || '')}</textarea>
-          </label>
+          <div class="form-field form-field-span2" id="adm-synopsis-field" data-novel-only="true"${initialNovelDetails ? '' : ' hidden'}>
+            <label for="adm-book-synopsis"><span>Sinopsis Buku *</span></label>
+            ${renderLiteraryEditorHtml({
+              panelId: 'adm-synopsis-panel', textareaId: 'adm-book-synopsis', countId: 'adm-synopsis-count',
+              toolbarLabel: 'Pemformatan teks sinopsis', rows: 5,
+              placeholder: 'Tulis sinopsis buku atau tempel format HTML aman...',
+              value: book?.synopsis || '', required: initialNovelDetails,
+              hintText: 'Gunakan Enter untuk paragraf baru, **tebal**, *miring*, > kutipan, atau HTML aman.'
+            })}
+          </div>
         </div>
 
         <div id="adm-upload-progress" class="upload-progress-wrap" hidden aria-live="polite">
@@ -173,38 +170,54 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
 
   if (!bodyEl) return;
 
-  const formEl = bodyEl.querySelector('#admin-book-form');
-  const coverPreview = bodyEl.querySelector('#adm-book-cover-preview');
-  const coverStatus = bodyEl.querySelector('#adm-cover-status');
-  const coverFileInput = bodyEl.querySelector('#adm-book-cover-file');
-  const pdfFileInput = bodyEl.querySelector('#adm-book-pdf-file');
-  const pdfStatus = bodyEl.querySelector('#adm-book-pdf-status');
-  const openPdfBtn = bodyEl.querySelector('#btn-adm-open-pdf');
-  const clearPdfBtn = bodyEl.querySelector('#btn-adm-clear-pdf');
-  const delBtn = bodyEl.querySelector('#btn-delete-book');
-  const saveBtn = bodyEl.querySelector('#btn-save-book');
-  const progressWrap = bodyEl.querySelector('#adm-upload-progress');
-  const progressLabel = bodyEl.querySelector('#adm-progress-label');
-  const progressPct = bodyEl.querySelector('#adm-progress-pct');
-  const progressFill = bodyEl.querySelector('#adm-progress-fill');
+  const q = (sel) => bodyEl.querySelector(sel);
+  const formEl = q('#admin-book-form');
+  const coverStatus = q('#adm-cover-status');
+  const pdfStatus = q('#adm-book-pdf-status');
+  const openPdfBtn = q('#btn-adm-open-pdf');
+  const clearPdfBtn = q('#btn-adm-clear-pdf');
+  const saveBtn = q('#btn-save-book');
+  const catSelect = q('#adm-book-cat');
+  const orderInput = q('#adm-book-order');
+  const authorInput = q('#adm-book-author');
+  const roleSelect = q('#adm-book-role');
+  const synopsisInput = q('#adm-book-synopsis');
   const defaultSaveText = saveBtn?.textContent || 'Simpan Perubahan';
+  let orderManuallyEdited = false;
+  orderInput?.addEventListener('input', () => { orderManuallyEdited = true; });
+
+  const setStatusText = (el, cls, text) => {
+    if (!el) return;
+    el.className = `file-status-text${cls ? ` ${cls}` : ''}`;
+    el.textContent = text;
+  };
+  const syncNovelFields = () => {
+    const selectedCat = catSelect?.value || 'Novel';
+    const isNovel = bookRequiresNovelDetails(selectedCat);
+    if (isNew && !orderManuallyEdited && orderInput instanceof HTMLInputElement) {
+      orderInput.value = String(getOrderForCat(selectedCat));
+    }
+    for (const el of formEl?.querySelectorAll('[data-novel-only]') || []) {
+      if (el instanceof HTMLElement) el.hidden = !isNovel;
+    }
+    for (const reqEl of [authorInput, roleSelect, synopsisInput]) {
+      if (reqEl instanceof HTMLInputElement || reqEl instanceof HTMLSelectElement || reqEl instanceof HTMLTextAreaElement) reqEl.required = isNovel;
+    }
+  };
+  catSelect?.addEventListener('change', syncNovelFields);
+  syncNovelFields();
+
+  bindLiteraryEditor({
+    panelEl: q('#adm-synopsis-panel'), textareaEl: synopsisInput,
+    countEl: q('#adm-synopsis-count'), onFormatClick: () => playSfx('click')
+  });
 
   barcodeScanner = mountBookBarcodeScanner({
-    inputEl: bodyEl.querySelector('#adm-book-qrcbn'),
-    camBtn: bodyEl.querySelector('#btn-adm-scan-cam'),
-    stopCamBtn: bodyEl.querySelector('#btn-adm-stop-cam'),
-    camBoxEl: bodyEl.querySelector('#adm-isbn-cam-box'),
-    videoEl: bodyEl.querySelector('#adm-isbn-video'),
-    imgInputEl: bodyEl.querySelector('#adm-isbn-img-file'),
-    statusEl: bodyEl.querySelector('#adm-isbn-scan-status'),
-    onDetected: (res) => {
-      playSfx('success');
-      showToast(`Kode buku terbaca: ${res.value}`, 'success');
-    },
-    onError: (msg) => {
-      playSfx('error');
-      showToast(msg, 'error');
-    }
+    inputEl: q('#adm-book-qrcbn'), camBtn: q('#btn-adm-scan-cam'), stopCamBtn: q('#btn-adm-stop-cam'),
+    camBoxEl: q('#adm-isbn-cam-box'), videoEl: q('#adm-isbn-video'), imgInputEl: q('#adm-isbn-img-file'),
+    statusEl: q('#adm-isbn-scan-status'),
+    onDetected: (res) => { playSfx('success'); showToast(`Kode buku terbaca: ${res.value}`, 'success'); },
+    onError: (msg) => { playSfx('error'); showToast(msg, 'error'); }
   });
 
   const syncPdfActions = (hasRemotePdf, hasAnyPdf, statusClass, statusText) => {
@@ -214,18 +227,16 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
       openPdfBtn.href = resolved.openUrl || '#';
     }
     if (clearPdfBtn instanceof HTMLElement) clearPdfBtn.hidden = !hasAnyPdf;
-    if (pdfStatus) {
-      pdfStatus.className = `file-status-text${statusClass ? ` ${statusClass}` : ''}`;
-      pdfStatus.textContent = statusText;
-    }
+    setStatusText(pdfStatus, statusClass, statusText);
   };
 
   const setProgress = (pct, text) => {
     const safePct = Math.min(100, Math.max(0, Math.round(pct)));
-    if (progressWrap instanceof HTMLElement) progressWrap.hidden = false;
-    if (progressLabel) progressLabel.textContent = text;
-    if (progressPct) progressPct.textContent = `${safePct}%`;
-    if (progressFill instanceof HTMLElement) progressFill.style.width = `${safePct}%`;
+    const wrap = q('#adm-upload-progress');
+    if (wrap instanceof HTMLElement) wrap.hidden = false;
+    if (q('#adm-progress-label')) q('#adm-progress-label').textContent = text;
+    if (q('#adm-progress-pct')) q('#adm-progress-pct').textContent = `${safePct}%`;
+    if (q('#adm-progress-fill') instanceof HTMLElement) q('#adm-progress-fill').style.width = `${safePct}%`;
     if (saveBtn) saveBtn.textContent = `Menyimpan (${safePct}%)...`;
     if (pendingPdfFile && pdfStatus) pdfStatus.textContent = `${text} (${safePct}%)`;
   };
@@ -235,40 +246,38 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
     setModalBusy(locked);
     if (!formEl) return;
     for (const el of formEl.querySelectorAll('input, select, textarea, button')) {
-      if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement || el instanceof HTMLButtonElement) {
-        el.disabled = locked;
-      }
+      if ('disabled' in el) el.disabled = locked;
     }
     if (openPdfBtn instanceof HTMLAnchorElement) {
       openPdfBtn.classList.toggle('is-disabled-link', locked);
       openPdfBtn.setAttribute('aria-disabled', locked ? 'true' : 'false');
     }
   };
+  const failFilePick = (input, el, msg) => {
+    if (input instanceof HTMLInputElement) input.value = '';
+    setStatusText(el, 'is-error', msg);
+    playSfx('error');
+    showToast(msg, 'error');
+  };
 
+  const coverFileInput = q('#adm-book-cover-file');
   coverFileInput?.addEventListener('change', async () => {
     const file = coverFileInput instanceof HTMLInputElement ? coverFileInput.files?.[0] : null;
     if (!file) return;
     try {
       const preview = await compressCoverToWebp(file);
       pendingCoverFile = file;
+      const coverPreview = q('#adm-book-cover-preview');
       if (coverPreview instanceof HTMLImageElement) coverPreview.src = preview.dataUrl;
-      if (coverStatus) {
-        coverStatus.className = 'file-status-text is-ok';
-        coverStatus.textContent = 'Siap unggah saat Simpan.';
-      }
+      setStatusText(coverStatus, 'is-ok', 'Siap unggah saat Simpan.');
       playSfx('pop');
     } catch (err) {
       pendingCoverFile = null;
-      if (coverFileInput instanceof HTMLInputElement) coverFileInput.value = '';
-      if (coverStatus) {
-        coverStatus.className = 'file-status-text is-error';
-        coverStatus.textContent = err?.message || 'Berkas gambar sampul tidak valid.';
-      }
-      playSfx('error');
-      showToast(err?.message || 'Berkas gambar sampul tidak valid.', 'error');
+      failFilePick(coverFileInput, coverStatus, err?.message || 'Berkas gambar sampul tidak valid.');
     }
   });
 
+  const pdfFileInput = q('#adm-book-pdf-file');
   pdfFileInput?.addEventListener('change', async () => {
     const file = pdfFileInput instanceof HTMLInputElement ? pdfFileInput.files?.[0] : null;
     if (!file) return;
@@ -279,11 +288,9 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
       playSfx('pop');
     } catch (err) {
       pendingPdfFile = null;
-      if (pdfFileInput instanceof HTMLInputElement) pdfFileInput.value = '';
       const hasRemote = Boolean(selectedPreviewUrl || selectedDriveId);
       syncPdfActions(hasRemote, hasRemote, 'is-error', err?.message || 'Berkas PDF tidak valid.');
-      playSfx('error');
-      showToast(err?.message || 'Berkas PDF tidak valid.', 'error');
+      failFilePick(pdfFileInput, pdfStatus, err?.message || 'Berkas PDF tidak valid.');
     }
   });
 
@@ -297,6 +304,7 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
   });
 
   let deleteArmed = false;
+  const delBtn = q('#btn-delete-book');
   delBtn?.addEventListener('click', async () => {
     if (!book) return;
     if (!deleteArmed) {
@@ -322,19 +330,28 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
 
   formEl?.addEventListener('submit', async (event) => {
     event.preventDefault();
+    const selectedCategory = catSelect?.value || 'Novel';
+    const needNovelDetails = bookRequiresNovelDetails(selectedCategory);
+    const rawSynopsis = synopsisInput?.value || '';
+    if (needNovelDetails && !String(authorInput?.value || '').trim()) {
+      playSfx('error');
+      return showToast('Nama penulis wajib diisi.', 'error');
+    }
+    if (needNovelDetails && !extractPlainLiteraryText(rawSynopsis)) {
+      playSfx('error');
+      return showToast('Sinopsis buku wajib diisi.', 'error');
+    }
     setFormLocked(true);
 
     try {
       const assets = await uploadBookPendingAssets({
-        pendingCoverFile,
+        pendingCoverFile: needNovelDetails ? pendingCoverFile : null,
         pendingPdfFile,
-        selectedCoverUrl,
-        selectedDriveId,
-        selectedPreviewUrl,
-        onProgress: setProgress,
+        selectedCoverUrl: needNovelDetails ? selectedCoverUrl : '',
+        selectedDriveId, selectedPreviewUrl, onProgress: setProgress,
         onWarning: (msg) => showToast(msg, 'info', 4000)
       });
-      selectedCoverUrl = assets.coverUrl;
+      if (needNovelDetails) selectedCoverUrl = assets.coverUrl;
       selectedDriveId = assets.driveId;
       selectedPreviewUrl = assets.previewUrl;
       pendingCoverFile = null;
@@ -344,19 +361,18 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
       }
 
       const payload = {
-        title: bodyEl.querySelector('#adm-book-title')?.value || '',
-        author_name: bodyEl.querySelector('#adm-book-author')?.value || '',
-        author_role: bodyEl.querySelector('#adm-book-role')?.value || 'Siswa XI',
-        author_class: bodyEl.querySelector('#adm-book-class')?.value || '',
-        category: bodyEl.querySelector('#adm-book-cat')?.value || 'Novel',
-        publication_year: Number(bodyEl.querySelector('#adm-book-year')?.value || 2026),
-        sort_order: Number(bodyEl.querySelector('#adm-book-order')?.value || nextSortOrder),
-        cover_url: selectedCoverUrl || FALLBACK_COVER,
-        gdrive_file_id: selectedDriveId,
-        gdrive_preview_url: selectedPreviewUrl,
-        qrcbn_code: bodyEl.querySelector('#adm-book-qrcbn')?.value || '',
-        synopsis: bodyEl.querySelector('#adm-book-synopsis')?.value || '',
-        is_published: Boolean(bodyEl.querySelector('#adm-book-published')?.checked)
+        title: q('#adm-book-title')?.value || '',
+        author_name: needNovelDetails ? authorInput?.value || '' : '',
+        author_role: needNovelDetails ? roleSelect?.value || 'Siswa XI' : book?.author_role || 'Siswa XI',
+        author_class: needNovelDetails ? q('#adm-book-class')?.value || '' : '',
+        category: selectedCategory,
+        publication_year: Number(q('#adm-book-year')?.value || 2026),
+        sort_order: Number(orderInput?.value || getOrderForCat(selectedCategory)),
+        cover_url: needNovelDetails ? selectedCoverUrl || FALLBACK_COVER : '',
+        gdrive_file_id: selectedDriveId, gdrive_preview_url: selectedPreviewUrl,
+        qrcbn_code: q('#adm-book-qrcbn')?.value || '',
+        synopsis: needNovelDetails ? rawSynopsis : '',
+        is_published: Boolean(q('#adm-book-published')?.checked)
       };
 
       if (isNew) await adminCreateBook(payload);
@@ -371,7 +387,7 @@ export function openBookEditorModal(book, onUpdated, { nextSortOrder = 13 } = {}
       closeModal(true);
     } catch (err) {
       setFormLocked(false);
-      if (progressWrap instanceof HTMLElement) progressWrap.hidden = true;
+      if (q('#adm-upload-progress') instanceof HTMLElement) q('#adm-upload-progress').hidden = true;
       if (saveBtn) saveBtn.textContent = defaultSaveText;
       playSfx('error');
       showToast(err?.message || 'Gagal menyimpan data buku.', 'error');

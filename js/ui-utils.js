@@ -56,19 +56,11 @@ export function createIcon(name) {
   return ICONS[name] || '';
 }
 
-/**
- * Melakukan escape karakter HTML agar aman dirender di template string.
- * @param {unknown} value
- * @returns {string}
- */
-export function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
+export {
+  escapeHtml,
+  extractPlainLiteraryText,
+  renderFormattedLiteraryHtml
+} from './literary-editor.js';
 
 /**
  * Memformat tanggal ISO menjadi format Indonesia ringkas.
@@ -273,97 +265,4 @@ export function renderSwipeCueHtml(currentPage, totalPages, hintText = 'Geser ki
 
   return `<div class="swipe-dots" role="navigation" aria-label="Penanda halaman">${dots}</div>
    `;
-}
-
-const LITERARY_HTML_RE = /<(?:p|br|div|strong|b|em|i|u|blockquote|ul|ol|li|h[1-6]|span|font|script|style|iframe|object|embed|svg)\b[^>]*>/i;
-const DROP_HTML_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE', 'NOSCRIPT', 'FORM', 'INPUT', 'TEXTAREA', 'SELECT', 'BUTTON']);
-const SAFE_HTML_TAGS = new Set(['P', 'BR', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'H3', 'H4']);
-const BLOCK_HTML_MAP = { DIV: 'P', H1: 'H3', H2: 'H3', H5: 'H4', H6: 'H4' };
-const BLOCK_TEXT_TAGS = new Set(['P', 'DIV', 'BR', 'LI', 'BLOCKQUOTE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
-
-function parseSafeHtmlDom(raw) {
-  if (typeof DOMParser !== 'function' || typeof document === 'undefined') return null;
-  const doc = new DOMParser().parseFromString(String(raw || ''), 'text/html');
-  for (const el of [...doc.body.querySelectorAll([...DROP_HTML_TAGS].join(',').toLowerCase())]) el.remove();
-  return doc.body;
-}
-
-/**
- * Mengambil teks polos bersih dari teks biasa, markdown ringan, atau HTML.
- * @param {string} raw
- * @returns {string}
- */
-export function extractPlainLiteraryText(raw) {
-  const input = String(raw || '').trim();
-  if (!input) return '';
-  let text = input;
-  if (LITERARY_HTML_RE.test(input)) {
-    const body = parseSafeHtmlDom(input);
-    if (body) {
-      const parts = [];
-      const walk = (n) => {
-        if (n.nodeType === 3) parts.push(n.textContent || '');
-        else if (n.nodeType === 1) {
-          const blk = BLOCK_TEXT_TAGS.has(n.tagName.toUpperCase());
-          if (blk) parts.push(' ');
-          for (const c of n.childNodes) walk(c);
-          if (blk) parts.push(' ');
-        }
-      };
-      walk(body);
-      text = parts.join('');
-    } else {
-      text = input.replace(/<(script|style|iframe|svg)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ');
-    }
-  }
-  return text.replace(/^>\s?/gm, '').replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/\*([^*\n]+)\*/g, '$1').replace(/\s+/g, ' ').trim();
-}
-
-const formatInlineLiterary = (line) =>
-  escapeHtml(line).replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>').replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
-
-/**
- * Merender teks karya sastra (plain text, markdown ringan, atau HTML aman tersanitasi).
- * @param {string} raw
- * @param {string} [fallbackText]
- * @returns {string}
- */
-export function renderFormattedLiteraryHtml(raw, fallbackText = '') {
-  const input = String(raw || '').replace(/\r\n?/g, '\n').trim();
-  if (!input) return fallbackText ? `<p>${escapeHtml(fallbackText)}</p>` : '';
-
-  if (LITERARY_HTML_RE.test(input)) {
-    const body = parseSafeHtmlDom(input);
-    if (body) {
-      const wrap = document.createElement('div');
-      const sanitize = (n) => {
-        if (n.nodeType === 3) return document.createTextNode(n.textContent || '');
-        if (n.nodeType !== 1) return null;
-        const tag = n.tagName.toUpperCase();
-        if (DROP_HTML_TAGS.has(tag)) return null;
-        const target = BLOCK_HTML_MAP[tag] || (SAFE_HTML_TAGS.has(tag) ? tag : '');
-        const out = target ? document.createElement(target.toLowerCase()) : document.createDocumentFragment();
-        if (target !== 'BR') {
-          for (const c of n.childNodes) { const clean = sanitize(c); if (clean) out.appendChild(clean); }
-        }
-        return out;
-      };
-      for (const c of body.childNodes) { const clean = sanitize(c); if (clean) wrap.appendChild(clean); }
-      if (wrap.innerHTML.trim()) return wrap.innerHTML;
-    }
-  }
-
-  const plain = LITERARY_HTML_RE.test(input)
-    ? input.replace(/<(script|style|iframe|svg)[\s\S]*?<\/\1>/gi, '').replace(/<[^>]+>/g, '\n')
-    : input;
-  const blocks = plain.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
-  if (!blocks.length) return fallbackText ? `<p>${escapeHtml(fallbackText)}</p>` : '';
-
-  return blocks.map((block) => {
-    const lines = block.split('\n').map((l) => l.trimEnd()).filter(Boolean);
-    if (lines.length && lines.every((l) => /^\s*>/.test(l))) {
-      return `<blockquote>${lines.map((l) => formatInlineLiterary(l.replace(/^\s*>\s?/, ''))).join('<br>')}</blockquote>`;
-    }
-    return `<p>${lines.map(formatInlineLiterary).join('<br>')}</p>`;
-  }).join('');
 }
