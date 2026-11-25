@@ -30,8 +30,8 @@ Dokumen ini wajib dibaca di awal setiap sesi chat. Seluruh aturan di bawah mengi
 
 ## 3. Identitas Visual & Tata Letak
 
-- **Tema Sekolah:** Mengusung identitas **SMA Negeri 1 Sidayu** (biru navy/royal sekolah `#0f294a` / `#1d4e89`, putih bersih, aksen emas hangat `#d97706` / `#f59e0b`, latar stage gelap elegan `#09111e` di luar bingkai 16:9 agar layar TV/Laptop fokus pada panggung aplikasi, serta kartu konten kontras tinggi yang tajam dibaca).
-- **Tipografi Non-Blocking:** Muat Google Fonts (`Plus Jakarta Sans` untuk UI/form/tabel dan `Merriweather` atau `Lora` untuk judul karya sastra) via `<link rel="preconnect">` dan `<link rel="stylesheet">` di `index.html`. Dilarang memakai `@import` di dalam CSS.
+- **Tema Sekolah & Nuansa Majalah Sastra:** Mengusung identitas **SMA Negeri 1 Sidayu** (biru navy/royal sekolah `#0f294a` / `#1d4e89`, latar kertas hangat `#f6f5f1`, kartu putih bersih berbatas tegas tanpa dekorasi berlebihan, latar luar `#111827` di luar bingkai 16:9). Pada bilah navigasi utama, latar bar tetap seragam dan rapi sementara **aksen/indikator tiap tab menu dibuat bervariasi** per modul (`--tab-accent-*` di `css/base.css`).
+- **Tipografi Non-Blocking:** Menggunakan kombinasi **`Times New Roman`** (dengan fallback metrik-kompatibel **`Tinos`**) untuk judul dan teks bacaan, **`DM Sans`** untuk antarmuka/menu/form, serta **`JetBrains Mono`** / **`Courier New`** khusus untuk kode lacak `SPN-XXXXXX` dan `ISBN/QRCBN`. Muat webfont (`DM Sans`, `Tinos`, `JetBrains Mono`) via `<link rel="preconnect">` dan `<link rel="stylesheet">` di `index.html`. Dilarang memakai `@import` di dalam CSS.
 
 ---
 

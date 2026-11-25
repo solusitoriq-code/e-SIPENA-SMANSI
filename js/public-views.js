@@ -134,11 +134,11 @@ function renderNovelCardHtml(book) {
         <div class="book-cover-3d">
           <img src="${escapeHtml(book.cover_url || 'assets/images/logo-smansi.webp')}" alt="Sampul novel ${safeTitle}" draggable="false" loading="lazy" decoding="async" width="296" height="420" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
         </div>
-        <span class="book-year-tag">${escapeHtml(book.publication_year || 2026)}</span>
       </div>
       <div class="book-card-body">
         <div class="book-meta-row">
           ${roleLabel ? `<span class="${getRoleBadgeClass(book.author_role)}">${escapeHtml(roleLabel)}</span>` : ''}
+          <span class="book-year-inline">${escapeHtml(book.publication_year || 2026)}</span>
         </div>
         <h3 class="book-card-title" title="${safeTitle}">${safeTitle}</h3>
         <p class="book-card-author" title="${safeAuthor}">${safeAuthor}</p>
@@ -147,7 +147,7 @@ function renderNovelCardHtml(book) {
             ${createIcon('heart')}<span class="like-count-value">${likesCount}</span>
           </button>
           <button type="button" class="secondary-btn card-btn" data-action="open-detail" data-book-id="${safeId}">Detail</button>
-          <button type="button" class="primary-btn card-btn" data-action="open-read" data-book-id="${safeId}">Baca</button>
+          <button type="button" class="primary-btn card-btn book-read-btn" data-action="open-read" data-book-id="${safeId}">Baca</button>
         </div>
       </div>
     </article>
@@ -175,7 +175,7 @@ function renderEditorialCardHtml(book, category) {
         <button type="button" class="like-pill-btn${liked ? ' is-liked' : ''}" data-action="quick-like" data-book-id="${safeId}" aria-pressed="${liked ? 'true' : 'false'}" aria-label="Sukai ${escapeHtml(category)} ${safeTitle}, saat ini ${likesCount} suka">
           ${createIcon('heart')}<span class="like-count-value">${likesCount}</span>
         </button>
-        <button type="button" class="primary-btn card-btn" data-action="open-read" data-book-id="${safeId}">Baca</button>
+        <button type="button" class="secondary-btn card-btn editorial-read-btn" data-action="open-read" data-book-id="${safeId}">Baca</button>
       </div>
     </article>
   `;
@@ -323,6 +323,7 @@ export function renderAntologiSections({
 
   if (jumpBarEl) {
     bindJumpBar(jumpBarEl);
+    let visibleCats = 0;
     let activeHidden = false;
     for (const chip of jumpBarEl.querySelectorAll('[data-antologi-jump]')) {
       const key = chip.getAttribute('data-antologi-jump') || '';
@@ -330,24 +331,26 @@ export function renderAntologiSections({
       if (key && info !== undefined) {
         chip.textContent = `${key.charAt(0).toUpperCase()}${key.slice(1)} (${info.totalItems})`;
         const isDisabled = Boolean(info.isHidden);
-        if (chip instanceof HTMLButtonElement) chip.disabled = isDisabled;
+        if (chip instanceof HTMLButtonElement) {
+          chip.disabled = isDisabled;
+          chip.hidden = isDisabled;
+        }
         chip.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+        if (!isDisabled) visibleCats += 1;
         if (isDisabled && chip.classList.contains('is-active')) {
           chip.classList.remove('is-active');
           activeHidden = true;
         }
       }
     }
+    jumpBarEl.hidden = visibleCats <= 1;
     if (activeHidden) jumpBarEl.querySelector('[data-antologi-jump="novel"]')?.classList.add('is-active');
   }
 
   const summaryEl = document.getElementById('antologi-empty-summary');
   if (summaryEl) {
-    const hiddenNames = sections.filter(([key]) => results[key]?.isHidden).map(([, label]) => label);
-    summaryEl.hidden = hiddenNames.length === 0;
-    summaryEl.textContent = hiddenNames.length
-      ? `Koleksi ${hiddenNames.join(' dan ')} belum memiliki karya terbit.`
-      : '';
+    summaryEl.hidden = true;
+    summaryEl.textContent = '';
   }
 
   return results;

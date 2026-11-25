@@ -34,6 +34,10 @@ import {
  */
 export function renderModels3dPanel(container, { models = [] } = {}) {
   if (!container) return;
+  const countEl = document.getElementById('models3d-count');
+  if (countEl) {
+    countEl.textContent = models.length ? `${models.length} Koleksi` : 'Koleksi 3D & AR';
+  }
   if (!models.length) {
     container.innerHTML = `<article class="empty-stage-note"><h3>Koleksi Pameran 3D Gresik Belum Tersedia</h3><p>Koleksi objek budaya 3D dan teks perkenalan dapat dikelola kurator melalui Ruang Pengelola.</p></article>`;
     return;
@@ -48,18 +52,14 @@ export function renderModels3dPanel(container, { models = [] } = {}) {
         <article class="model3d-card" data-model-id="${safeId}" data-nav-card="true">
           <div class="model3d-card-media" data-action="open-model-3d" data-model-id="${safeId}">
             <img src="${posterSrc}" alt="Pratinjau ${safeTitle}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
-            <div class="model3d-card-badges">
-              <span class="model3d-badge-type">3D &amp; AR</span>
-              <span class="model3d-badge-cat">${escapeHtml(item.category || 'Budaya Gresik')}</span>
-            </div>
           </div>
           <div class="model3d-card-body">
             <div class="culture-card-meta">
-              <span class="culture-index">Koleksi ${idx + 1}</span>
+              <span class="culture-index">Koleksi ${idx + 1} &middot; ${escapeHtml(item.category || 'Budaya Gresik')}</span>
             </div>
             <h3 class="model3d-card-title">${safeTitle}</h3>
             <div class="model3d-card-actions">
-              <button type="button" class="primary-btn inline-action-btn" data-action="open-model-3d" data-model-id="${safeId}">${createIcon('cube')}<span>Lihat 3D &amp; AR</span></button>
+              <button type="button" class="primary-btn" data-action="open-model-3d" data-model-id="${safeId}">Lihat 3D &amp; AR</button>
             </div>
           </div>
         </article>
@@ -242,23 +242,22 @@ export function renderMadingPanel(
   const pageItems = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const paginationHtml = totalPages > 1
-    ? `<div class="mading-pagination"><button type="button" class="page-btn" data-mading-page="${safePage - 1}" ${safePage <= 1 ? 'disabled' : ''}>Sebelumnya</button><span class="page-indicator">Hal ${safePage} / ${totalPages} (${filtered.length} karya)</span><button type="button" class="page-btn" data-mading-page="${safePage + 1}" ${safePage >= totalPages ? 'disabled' : ''}>Berikutnya</button></div><div class="swipe-cue-bar mading-swipe-cue">${renderSwipeCueHtml(safePage, totalPages, 'Geser mading kiri / kanan')}</div>`
+    ? `<div class="mading-pagination"><button type="button" class="page-btn" data-mading-page="${safePage - 1}" ${safePage <= 1 ? 'disabled' : ''}>Sebelumnya</button><span class="page-indicator">Hal ${safePage} / ${totalPages} (${filtered.length} karya)</span><button type="button" class="page-btn" data-mading-page="${safePage + 1}" ${safePage >= totalPages ? 'disabled' : ''}>Berikutnya</button></div>`
     : '';
 
   container.innerHTML = `<div class="mading-cards-grid">${pageItems
     .map((work) => `
       <article class="mading-card" data-work-id="${escapeHtml(work.id)}" data-nav-card="true">
         <div class="mading-card-top">
-          <span class="status-tag is-lolos">${escapeHtml(work.status || 'Lolos Mading')}</span>
           <span class="mading-category">${escapeHtml(work.category || 'Karya')}</span>
+          <span class="mading-date">${escapeHtml(formatDateId(work.published_at))}</span>
         </div>
         <h3 class="mading-card-title">${escapeHtml(work.title)}</h3>
         <p class="mading-card-author"><strong>${escapeHtml(work.author_name)}</strong><span>${escapeHtml(work.author_role)} &middot; ${escapeHtml(work.author_class_unit || '-')}</span></p>
         ${work.culture_theme ? `<p class="mading-card-theme">Tema: ${escapeHtml(work.culture_theme)}</p>` : ''}
         <p class="mading-card-summary">${escapeHtml(extractPlainLiteraryText(work.summary || ''))}</p>
         <div class="mading-card-footer">
-          <span class="mading-date">${escapeHtml(formatDateId(work.published_at))}</span>
-          <button type="button" class="primary-btn inline-action-btn" data-action="read-mading" data-work-id="${escapeHtml(work.id)}">${createIcon('book')}<span>Baca Karya</span></button>
+          <button type="button" class="primary-btn" data-action="read-mading" data-work-id="${escapeHtml(work.id)}">Baca Karya</button>
         </div>
       </article>
     `)
@@ -313,7 +312,7 @@ export function renderLibrarianPanel(container, { siteSettings = {}, activities 
             <article class="librarian-doc-card librarian-activity-card" data-activity-id="${escapeHtml(act.id)}" data-nav-card="true">
               <div class="librarian-activity-media" data-action="open-activity" data-activity-id="${escapeHtml(act.id)}">
                 <img src="${escapeHtml(coverUrl)}" alt="${escapeHtml(act.title)}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${FALLBACK_ACTIVITY_PHOTO}'">
-                <span class="librarian-photo-badge">${createIcon('camera')}<span>${Math.max(1, photos.length)} Foto</span></span>
+                <span class="librarian-photo-badge">${Math.max(1, photos.length)} Foto</span>
               </div>
               ${extraThumbs.length
             ? `
@@ -332,7 +331,7 @@ export function renderLibrarianPanel(container, { siteSettings = {}, activities 
               <h3 class="librarian-doc-title">${escapeHtml(act.title)}</h3>
               ${desc ? `<p class="librarian-doc-summary">${escapeHtml(desc)}</p>` : ''}
               <div class="librarian-doc-actions">
-                <button type="button" class="secondary-btn inline-action-btn" data-action="open-activity" data-activity-id="${escapeHtml(act.id)}">${createIcon('camera')}<span>${photos.length > 1 ? `Lihat ${photos.length} Foto` : 'Lihat Foto'}</span></button>
+                <button type="button" class="secondary-btn" data-action="open-activity" data-activity-id="${escapeHtml(act.id)}">${photos.length > 1 ? `Lihat ${photos.length} Foto` : 'Lihat Foto'}</button>
               </div>
             </article>
           `;

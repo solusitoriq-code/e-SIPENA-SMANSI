@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..600&family=JetBrains+Mono:wght@500;700&family=Tinos:ital,wght@0,400;0,700;1,400;1,700&display=swap">
 
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/layout.css">
@@ -97,7 +97,7 @@
       <!-- Panel 1: Etalase Antologi (Novel, Cerpen, Puisi) -->
       <section class="hub-panel is-active" id="panel-rak" data-panel="rak" role="tabpanel" aria-labelledby="tab-rak">
         <div class="antologi-global-bar">
-          <nav class="antologi-jump-bar" id="antologi-jump-bar" aria-label="Navigasi jenis antologi">
+          <nav class="antologi-jump-bar" id="antologi-jump-bar" aria-label="Navigasi jenis antologi" hidden>
             <button class="filter-chip antologi-jump-chip is-active" type="button" data-antologi-jump="novel">Novel
               (12)</button>
             <button class="filter-chip antologi-jump-chip" type="button" data-antologi-jump="cerpen" disabled
@@ -176,29 +176,13 @@
             </div>
 
             <div class="books-shelf-stage">
-              <button id="btn-shelf-prev" class="shelf-edge-btn" type="button" data-shelf-edge-prev
-                aria-label="Halaman rak novel sebelumnya">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-              </button>
               <div id="books-grid" class="books-grid" data-shelf-grid aria-live="polite">
                 <article class="empty-stage-note">
                   <h2>Etalase Novel</h2>
                   <p>Memuat etalase novel SMAN 1 Sidayu...</p>
                 </article>
               </div>
-              <button id="btn-shelf-next" class="shelf-edge-btn" type="button" data-shelf-edge-next
-                aria-label="Halaman rak novel berikutnya">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
             </div>
-            <div id="books-swipe-cue" class="swipe-cue-bar" data-shelf-swipe-cue
-              aria-label="Indikator geser halaman rak novel" hidden></div>
           </section>
 
           <!-- Section 2: Cerpen -->
@@ -237,24 +221,8 @@
               </div>
             </div>
             <div class="books-shelf-stage">
-              <button class="shelf-edge-btn" type="button" data-shelf-edge-prev
-                aria-label="Halaman rak cerpen sebelumnya" hidden>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-              </button>
               <div id="cerpen-grid" class="editorial-cards-grid" data-shelf-grid aria-live="polite"></div>
-              <button class="shelf-edge-btn" type="button" data-shelf-edge-next
-                aria-label="Halaman rak cerpen berikutnya" hidden>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
             </div>
-            <div id="cerpen-swipe-cue" class="swipe-cue-bar" data-shelf-swipe-cue
-              aria-label="Indikator geser halaman rak cerpen" hidden></div>
           </section>
 
           <!-- Section 3: Puisi -->
@@ -293,26 +261,10 @@
               </div>
             </div>
             <div class="books-shelf-stage">
-              <button class="shelf-edge-btn" type="button" data-shelf-edge-prev
-                aria-label="Halaman rak puisi sebelumnya" hidden>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-              </button>
               <div id="puisi-grid" class="editorial-cards-grid editorial-cards-puisi" data-shelf-grid
                 aria-live="polite">
               </div>
-              <button class="shelf-edge-btn" type="button" data-shelf-edge-next
-                aria-label="Halaman rak puisi berikutnya" hidden>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
             </div>
-            <div id="puisi-swipe-cue" class="swipe-cue-bar" data-shelf-swipe-cue
-              aria-label="Indikator geser halaman rak puisi" hidden></div>
           </section>
           <p id="antologi-empty-summary" class="antologi-empty-summary" hidden></p>
         </div>
@@ -323,10 +275,9 @@
         aria-labelledby="tab-pameran3d" hidden>
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Galeri AR &amp; Warisan Lokal</p>
             <h2 class="panel-title">Pameran 3D Gresik</h2>
           </div>
-          <span class="panel-badge">Objek 3D, AR &amp; Audio</span>
+          <span id="models3d-count" class="panel-badge">Koleksi 3D &amp; AR</span>
         </div>
         <div id="models3d-container" class="panel-body-scroll">
           <article class="empty-stage-note">
@@ -341,7 +292,6 @@
         aria-labelledby="tab-cerita-gresik" hidden>
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Galeri Video Kearifan Lokal</p>
             <h2 class="panel-title">Cerita Gresik</h2>
           </div>
           <span id="cerita-gresik-count" class="panel-badge">Daftar Video</span>
@@ -359,7 +309,6 @@
         hidden>
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Publikasi Warga Sekolah</p>
             <h2 class="panel-title">Mading Digital SMAN 1 Sidayu</h2>
           </div>
           <div class="mading-header-actions">
@@ -372,22 +321,8 @@
               <button class="filter-chip" type="button" data-mading-role="Tendik">Tendik</button>
             </div>
             <div class="mading-cta-group">
-              <button id="btn-mading-track" class="secondary-btn inline-action-btn" type="button">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <span>Lacak Karya Saya</span>
-              </button>
-              <button id="btn-mading-submit" class="primary-btn inline-action-btn" type="button">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="22" y1="2" x2="11" y2="13"></line>
-                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                </svg>
-                <span>Ajukan Karya</span>
-              </button>
+              <button id="btn-mading-track" class="secondary-btn" type="button">Lacak Karya Saya</button>
+              <button id="btn-mading-submit" class="primary-btn" type="button">Ajukan Karya</button>
             </div>
           </div>
         </div>
@@ -404,7 +339,6 @@
         aria-labelledby="tab-pustakawan" hidden>
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Dokumentasi Kegiatan Perpustakaan</p>
             <h2 class="panel-title">Sudut Pustakawan</h2>
           </div>
           <span id="librarian-activity-count" class="panel-badge">Galeri Foto</span>
@@ -422,11 +356,9 @@
         hidden>
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Partisipasi</p>
             <h2 id="kirim-panel-title" class="panel-title">Kirim Karya &amp; Lacak Kode</h2>
           </div>
           <div class="panel-header-actions">
-            <span class="panel-badge">Format PDF Maks. 3 MB</span>
             <button id="btn-kirim-back-mading" class="secondary-btn inline-action-btn" type="button">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -467,7 +399,6 @@
         aria-labelledby="tab-cetak-qr" hidden>
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Siap Tempel di Perpustakaan</p>
             <h2 class="panel-title">Cetak Lembar QR Code A4</h2>
           </div>
           <button id="btn-print-qr" class="primary-btn" type="button">Cetak Lembar A4</button>

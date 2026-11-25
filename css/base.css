@@ -3,7 +3,7 @@
    ========================================================================== */
 
 :root {
-  --bg-outer: #09111e;
+  --bg-outer: #111827;
   --navy-950: #0b1b33;
   --navy-900: #0f294a;
   --navy-800: #163a66;
@@ -12,29 +12,53 @@
   --gold-400: #f59e0b;
   --gold-100: #fef3c7;
 
-  --surface-stage: #f3f6fb;
-  --surface-card: #ffffff;
-  --surface-muted: #e8eef7;
-  --border-subtle: #cbd5e1;
-  --border-strong: #94a3b8;
+  /* Aksen warna per menu navigasi (indikator tab & aksen modul) */
+  --tab-accent-rak: #f59e0b;
+  --tab-accent-3d: #2dd4bf;
+  --tab-accent-cerita: #fb923c;
+  --tab-accent-mading: #4ade80;
+  --tab-accent-pustakawan: #60a5fa;
+  --tab-accent-kelola: #cbd5e1;
 
-  --text-main: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #475569;
+  --accent-rak-ink: #b45309;
+  --accent-3d-ink: #0f766e;
+  --accent-cerita-ink: #c2410c;
+  --accent-mading-ink: #15803d;
+  --accent-pustakawan-ink: #0369a1;
+  --accent-kelola-ink: #475569;
+
+  /* Permukaan kertas majalah / buletin sastra */
+  --surface-stage: #f5f4f0;
+  --surface-card: #ffffff;
+  --surface-subtle: #faf9f6;
+  --surface-muted: #ebe8df;
+  --surface-cover-stage: radial-gradient(circle at 50% 35%, #ffffff 0%, #eaf0f8 100%);
+  --border-subtle: #d6d3c9;
+  --border-strong: #9ca3af;
+
+  --text-main: #18181b;
+  --text-secondary: #3f3f46;
+  --text-muted: #52525b;
   --text-on-dark: #f8fafc;
 
   --status-success: #15803d;
   --status-warn: #b45309;
   --status-danger: #b91c1c;
 
-  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-literary: 'Lora', Georgia, Cambria, 'Times New Roman', serif;
+  --btn-read-bg: #b45309;
+  --btn-read-hover: #92400e;
+  --btn-read-text: #ffffff;
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --shadow-card: 0 4px 14px rgba(15, 41, 74, 0.08);
-  --shadow-stage: 0 20px 50px rgba(0, 0, 0, 0.55);
+  --font-ui: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-literary: 'Times New Roman', 'Tinos', Times, Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --shadow-card: 0 2px 8px rgba(15, 41, 74, 0.06);
+  --shadow-card-hover: 0 10px 22px rgba(15, 41, 74, 0.12);
+  --shadow-stage: 0 12px 32px rgba(0, 0, 0, 0.36);
 }
 
 *,

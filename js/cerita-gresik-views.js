@@ -148,21 +148,16 @@ export function renderCeritaGresikPanel(container, { videos = [] } = {}) {
             <div class="cerita-video-poster-fallback" aria-hidden="true">
               <span class="cerita-video-play-ring">${createIcon('play')}</span>
             </div>
-            <span class="cerita-video-platform-pill">${escapeHtml(info.platform)}</span>
           </div>
           <div class="cerita-video-body">
             <div class="culture-card-meta">
-              <span class="culture-index">Video ${idx + 1}</span>
+              <span class="culture-index">Video ${idx + 1} &middot; ${escapeHtml(info.platform)}</span>
             </div>
             <h3 class="cerita-video-title">${safeTitle}</h3>
             ${desc ? `<p class="cerita-video-desc">${escapeHtml(desc)}</p>` : ''}
             <div class="cerita-video-actions">
-              <button type="button" class="primary-btn inline-action-btn" data-action="open-cerita-video" data-cerita-id="${safeId}">
-                ${createIcon('play')}<span>Tonton Video</span>
-              </button>
-              <a class="secondary-btn inline-action-btn" href="${safeUrl}" target="_blank" rel="noopener noreferrer" aria-label="Buka tautan ${safeTitle} di tab baru">
-                ${createIcon('external')}<span>Buka Tautan</span>
-              </a>
+              <button type="button" class="primary-btn" data-action="open-cerita-video" data-cerita-id="${safeId}">Tonton Video</button>
+              <a class="secondary-btn inline-action-btn" href="${safeUrl}" target="_blank" rel="noopener noreferrer" aria-label="Buka tautan ${safeTitle} di tab baru">Buka Tautan</a>
             </div>
           </div>
         </article>

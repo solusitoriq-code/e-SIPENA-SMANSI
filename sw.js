@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'esipena-shell-v34';
+const SHELL_CACHE = 'esipena-shell-v37';
 const RUNTIME_CACHE = 'esipena-runtime-v16';
 const PDFJS_ORIGIN = 'https://cdn.jsdelivr.net';
 const PDFJS_PATH_PREFIX = '/npm/pdfjs-dist@4.8.69/';

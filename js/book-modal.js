@@ -43,13 +43,14 @@ function buildEditorialMetaHtml(book, hasAuthor) {
   const items = [
     book.category || 'Novel',
     roleLabel,
-    `Tahun ${book.publication_year || 2026}`,
-    rawCode ? `${codePrefix}: ${rawCode}` : ''
-  ].filter(Boolean);
+    `Tahun ${book.publication_year || 2026}`
+  ].filter(Boolean).map((item) => `<span>${escapeHtml(item)}</span>`);
 
-  return `<div class="book-editorial-meta">${items
-    .map((item) => `<span>${escapeHtml(item)}</span>`)
-    .join('<span class="meta-sep" aria-hidden="true">&middot;</span>')}</div>`;
+  if (rawCode) {
+    items.push(`<span>${escapeHtml(codePrefix)}: <code class="isbn-code-inline">${escapeHtml(rawCode)}</code></span>`);
+  }
+
+  return `<div class="book-editorial-meta">${items.join('<span class="meta-sep" aria-hidden="true">&middot;</span>')}</div>`;
 }
 
 /**
