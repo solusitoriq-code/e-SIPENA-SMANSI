@@ -1,0 +1,656 @@
+/* ==========================================================================
+   e-SIPENA — Hero Identitas Sekolah, Etalase Antologi & Kartu Karya
+   ========================================================================== */
+
+.hero-strip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 16px;
+  background:
+    radial-gradient(circle at 86% 18%, rgba(245, 158, 11, 0.2), transparent 45%),
+    linear-gradient(125deg, #0b1b33 0%, var(--navy-900) 56%, var(--royal-700) 100%);
+  color: #ffffff;
+  border: 1px solid rgba(253, 230, 138, 0.24);
+  border-bottom: 2px solid rgba(245, 158, 11, 0.55);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 20px rgba(11, 27, 51, 0.14);
+}
+
+.hero-strip.hero-school-banner {
+  min-height: 84px;
+  padding: 0;
+  gap: 0;
+  align-items: stretch;
+  overflow: hidden;
+  background: linear-gradient(115deg, #0b1b33 0%, var(--navy-900) 64%, var(--navy-900) 100%);
+}
+
+.hero-school-banner .hero-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  position: relative;
+  z-index: 2;
+  background: radial-gradient(circle at 12% 20%, rgba(245, 158, 11, 0.12), transparent 56%);
+}
+
+.hero-school-banner .hero-media {
+  flex: 0 0 clamp(170px, 24%, 250px);
+  position: relative;
+  min-height: 84px;
+  overflow: hidden;
+  background: var(--navy-900);
+}
+
+.hero-school-banner .hero-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--navy-900) 0%,
+    rgba(15, 41, 74, 0.68) 20%,
+    rgba(15, 41, 74, 0.12) 56%,
+    rgba(11, 27, 51, 0.18) 100%
+  );
+}
+
+.hero-school-banner .hero-media-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 26%;
+  display: block;
+}
+
+.hero-strip .eyebrow {
+  color: #fde68a;
+  letter-spacing: 0.08em;
+}
+
+.hero-title {
+  margin: 1px 0 0;
+  font-family: var(--font-literary);
+  font-size: 19px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.18;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+}
+
+.hero-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: rgba(248, 250, 252, 0.86);
+  line-height: 1.3;
+}
+
+/* Etalase Antologi 3 Section (Novel, Cerpen, Puisi) */
+.antologi-global-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.antologi-jump-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.antologi-jump-chip:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.antologi-scroll-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 10px;
+}
+
+.antologi-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 0 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  scroll-margin-top: 8px;
+}
+
+.antologi-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 7px;
+  border-bottom: 1px solid #d5dfec;
+}
+
+.antologi-empty-summary {
+  margin: 2px 0 0;
+  padding: 8px 12px;
+  border-top: 1px solid #d5dfec;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.antologi-sec-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.antologi-sec-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.antologi-sec-title {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy-950);
+  line-height: 1.2;
+}
+
+.antologi-sec-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.antologi-novel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Grid Rak 4 Kolom Etalase (Muat Rapi di 16:9) */
+.books-shelf-stage {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  overflow-x: hidden;
+}
+
+.shelf-edge-btn {
+  flex: 0 0 40px;
+  min-width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(15, 41, 74, 0.16);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--navy-900);
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.shelf-edge-btn:hover:not(:disabled) {
+  background: var(--navy-900);
+  color: #ffffff;
+  transform: scale(1.03);
+}
+
+.shelf-edge-btn:disabled {
+  opacity: 0.25;
+}
+
+.books-grid,
+.editorial-cards-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  gap: 14px;
+  overflow: visible;
+  user-select: none;
+  padding: 2px 3px 4px;
+  transition: transform 0.12s ease-out;
+}
+
+.books-grid.is-dragging,
+.editorial-cards-grid.is-dragging {
+  cursor: grabbing;
+}
+
+.books-grid.is-eight-grid,
+.editorial-cards-grid.is-eight-grid {
+  grid-auto-rows: auto;
+}
+
+.book-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--surface-card);
+  border: 1px solid #d5dfec;
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(15, 41, 74, 0.08);
+  overflow: hidden;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.book-card:hover,
+.book-card:focus-within {
+  transform: translateY(-3px);
+  border-color: var(--royal-700);
+  box-shadow: 0 14px 28px rgba(15, 41, 74, 0.16);
+}
+
+.book-cover-stage {
+  flex: 0 0 auto;
+  height: clamp(164px, 23.5vh, 214px);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px 8px;
+  background: radial-gradient(circle at 50% 35%, #ffffff 0%, #e7eef8 100%);
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+}
+
+.book-cover-3d {
+  position: relative;
+  height: 100%;
+  max-height: 100%;
+  max-width: 100%;
+  aspect-ratio: 148 / 210;
+  border-radius: 3px 8px 8px 3px;
+  overflow: hidden;
+  background: var(--navy-900);
+  box-shadow:
+    -5px 8px 18px rgba(11, 27, 51, 0.34),
+    2px 3px 7px rgba(11, 27, 51, 0.16);
+  transition: transform 0.2s ease;
+}
+
+.book-card:hover .book-cover-3d {
+  transform: scale(1.025) rotate(-0.6deg);
+}
+
+.book-cover-3d::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 11px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.36) 0%,
+    rgba(0, 0, 0, 0.22) 45%,
+    rgba(255, 255, 255, 0.12) 72%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.book-cover-3d img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.book-year-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(11, 27, 51, 0.82);
+  color: #fde68a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.book-card-body {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 10px 12px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.book-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.role-xi {
+  background: #dbeafe;
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+.role-xii {
+  background: #ccfbf1;
+  color: #115e59;
+  border-color: #99f6e4;
+}
+
+.role-guru {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.role-x {
+  background: #e0e7ff;
+  color: #3730a3;
+  border-color: #c7d2fe;
+}
+
+.role-tendik {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.book-card-title {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--navy-950);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.5em;
+}
+
+.book-card-author {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.book-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.like-pill-btn {
+  min-height: 40px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.like-pill-btn:hover {
+  border-color: #fca5a5;
+  color: #b91c1c;
+  background: #fff5f5;
+}
+
+.like-pill-btn.is-liked {
+  background: #fef2f2;
+  border-color: #f87171;
+  color: #b91c1c;
+}
+
+.like-pill-btn.is-liked svg {
+  fill: #dc2626;
+  stroke: #dc2626;
+}
+
+.card-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 8px;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-size-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Indikator Swipe & Titik Halaman */
+.swipe-cue-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(15, 41, 74, 0.06);
+  border: 1px solid rgba(15, 41, 74, 0.12);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  align-self: center;
+}
+
+.swipe-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.swipe-dot-btn {
+  padding: 0;
+  min-width: 40px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.swipe-dot-pill {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #94a3b8;
+  transition: width 0.18s ease, background-color 0.18s ease;
+}
+
+.swipe-dot-btn.is-active .swipe-dot-pill {
+  width: 22px;
+  background: var(--navy-900);
+}
+
+.mading-swipe-cue {
+  width: fit-content;
+  margin: 4px auto 0;
+}
+
+@keyframes swipeNextIn {
+  from { opacity: 0.45; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes swipePrevIn {
+  from { opacity: 0.45; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.books-grid.is-swipe-next,
+.editorial-cards-grid.is-swipe-next {
+  animation: swipeNextIn 0.22s ease;
+}
+
+.books-grid.is-swipe-prev,
+.editorial-cards-grid.is-swipe-prev {
+  animation: swipePrevIn 0.22s ease;
+}
+
+/* Kartu Antologi Editorial (Cerpen & Puisi Tanpa Sampul & Penulis) */
+
+.editorial-book-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 14px;
+  background: var(--surface-card);
+  border: 1px solid #d5dfec;
+  border-top: 2px solid rgba(29, 78, 137, 0.36);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(15, 41, 74, 0.06);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.editorial-cards-puisi .editorial-book-card {
+  border-top-color: rgba(217, 119, 6, 0.48);
+}
+
+.editorial-book-card:hover,
+.editorial-book-card:focus-within {
+  transform: translateY(-2px);
+  border-color: var(--royal-700);
+  box-shadow: 0 12px 24px rgba(15, 41, 74, 0.13);
+}
+
+.editorial-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  cursor: pointer;
+}
+
+.editorial-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.editorial-year-pill,
+.editorial-pdf-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.editorial-year-pill {
+  background: #f1f5f9;
+  color: var(--text-secondary);
+}
+
+.editorial-pdf-pill {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.editorial-card-title {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--navy-950);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.6em;
+}
+
+.editorial-card-sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.editorial-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid #eef2f7;
+}
+
+.editorial-empty-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  color: var(--text-secondary);
+}
+
+.editorial-empty-card p {
+  margin: 0;
+  font-size: 14px;
+}

@@ -1,0 +1,136 @@
+/* ==========================================================================
+   e-SIPENA SMA Negeri 1 Sidayu — Gaya Utama Kanvas 16:9 & Adaptif HP/Tablet
+   ========================================================================== */
+
+:root {
+  --bg-outer: #09111e;
+  --navy-950: #0b1b33;
+  --navy-900: #0f294a;
+  --navy-800: #163a66;
+  --royal-700: #1d4e89;
+  --gold-500: #d97706;
+  --gold-400: #f59e0b;
+  --gold-100: #fef3c7;
+
+  --surface-stage: #f3f6fb;
+  --surface-card: #ffffff;
+  --surface-muted: #e8eef7;
+  --border-subtle: #cbd5e1;
+  --border-strong: #94a3b8;
+
+  --text-main: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #475569;
+  --text-on-dark: #f8fafc;
+
+  --status-success: #15803d;
+  --status-warn: #b45309;
+  --status-danger: #b91c1c;
+
+  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-literary: 'Lora', Georgia, Cambria, 'Times New Roman', serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-card: 0 4px 14px rgba(15, 41, 74, 0.08);
+  --shadow-stage: 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-outer);
+  color: var(--text-main);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Indikator Fokus Tebal untuk TV Android (D-Pad) & Navigasi Keyboard */
+:focus-visible {
+  outline: 3px solid var(--gold-400);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.28);
+}
+
+button,
+input,
+select,
+textarea,
+a {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Kanvas Utama Rasio 16:9 (Laptop, PC, TV Android & HP/Tablet Landscape)
+   ========================================================================== */
+
+#app-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
+  max-width: 177.78vh;
+  max-height: 56.25vw;
+  max-width: 177.78dvh;
+  max-height: 56.25dvw;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-stage);
+  box-shadow: var(--shadow-stage);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Mode Adaptif Penuh Layar untuk HP Portrait, HP Landscape, dan Tablet */
+@media screen and (orientation: portrait) and (max-width: 1024px),
+       screen and (orientation: landscape) and (max-height: 500px),
+       screen and (hover: none) and (pointer: coarse) and (max-width: 1366px) {
+  #app-container {
+    width: 100%;
+    height: 100%;
+    width: 100dvw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: auto;
+    border: 0;
+    box-shadow: none;
+  }
+}
+
+/* Tombol Nonaktif Global */
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

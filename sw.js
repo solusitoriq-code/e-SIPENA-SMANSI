@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'esipena-shell-v32';
+const SHELL_CACHE = 'esipena-shell-v33';
 const RUNTIME_CACHE = 'esipena-runtime-v16';
 const PDFJS_ORIGIN = 'https://cdn.jsdelivr.net';
 const PDFJS_PATH_PREFIX = '/npm/pdfjs-dist@4.8.69/';
@@ -8,7 +8,12 @@ const MODEL_VIEWER_PREFIX = '/ajax/libs/model-viewer/';
 const APP_SHELL_ASSETS = [
   './',
   './index.html',
-  './css/style.css',
+  './css/base.css',
+  './css/layout.css',
+  './css/catalog.css',
+  './css/reader-3d.css',
+  './css/forms-admin.css',
+  './css/responsive.css',
   './css/print.css',
   './manifest.json',
   './data/esipena_data.json',
