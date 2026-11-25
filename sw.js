@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'esipena-shell-v29';
+const SHELL_CACHE = 'esipena-shell-v30';
 const RUNTIME_CACHE = 'esipena-runtime-v16';
 const PDFJS_ORIGIN = 'https://cdn.jsdelivr.net';
 const PDFJS_PATH_PREFIX = '/npm/pdfjs-dist@4.8.69/';
@@ -13,6 +13,7 @@ const APP_SHELL_ASSETS = [
   './manifest.json',
   './data/esipena_data.json',
   './assets/images/logo-smansi.webp',
+  './assets/images/smansi-banner.webp',
   './assets/icons/icon-192.png',
   './assets/icons/apple-touch-icon.png',
   './js/activity-modal.js',
