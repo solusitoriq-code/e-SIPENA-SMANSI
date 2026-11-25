@@ -123,7 +123,9 @@ function renderNovelCardHtml(book) {
   const safeId = escapeHtml(book.id);
   const safeTitle = escapeHtml(book.title);
   const safeAuthor = escapeHtml(book.author_name);
-  const safeClass = escapeHtml(book.author_class || book.publication_year || '');
+  const roleLabel = book.author_class
+    ? `${book.author_role} · ${book.author_class}`
+    : (book.author_role || '');
   const likesCount = Number(book.likes_count || 0);
 
   return `
@@ -136,8 +138,7 @@ function renderNovelCardHtml(book) {
       </div>
       <div class="book-card-body">
         <div class="book-meta-row">
-          <span class="${getRoleBadgeClass(book.author_role)}">${escapeHtml(book.author_role)}</span>
-          ${safeClass ? `<span class="book-class-tag">${safeClass}</span>` : ''}
+          ${roleLabel ? `<span class="${getRoleBadgeClass(book.author_role)}">${escapeHtml(roleLabel)}</span>` : ''}
         </div>
         <h3 class="book-card-title" title="${safeTitle}">${safeTitle}</h3>
         <p class="book-card-author" title="${safeAuthor}">${safeAuthor}</p>
@@ -164,9 +165,8 @@ function renderEditorialCardHtml(book, category) {
     <article class="editorial-book-card" data-book-id="${safeId}" data-nav-card="true">
       <div class="editorial-card-body" data-action="open-read" data-book-id="${safeId}">
         <div class="editorial-card-meta">
-          <span class="editorial-cat-pill">${escapeHtml(category)}</span>
           <span class="editorial-year-pill">${escapeHtml(book.publication_year || 2026)}</span>
-          ${gdrive.hasDriveFile ? '<span class="editorial-pdf-pill">PDF Siap</span>' : ''}
+          ${gdrive.hasDriveFile ? '<span class="editorial-pdf-pill">PDF</span>' : ''}
         </div>
         <h3 class="editorial-card-title" title="${safeTitle}">${safeTitle}</h3>
         <p class="editorial-card-sub">Antologi ${escapeHtml(category)} SMAN 1 Sidayu</p>
@@ -183,21 +183,16 @@ function renderEditorialCardHtml(book, category) {
 
 function renderShelfSection(opts) {
   const {
-    sectionEl,
-    books = [],
-    category = 'Novel',
-    roleFilter = 'all',
-    searchQuery = '',
-    page = 1,
-    pageSize = 4,
-    onOpenBook,
-    onQuickLike,
-    onResetFilter,
-    onSelectPage
+    sectionEl, books = [], category = 'Novel', roleFilter = 'all', searchQuery = '',
+    page = 1, pageSize = 4, onOpenBook, onQuickLike, onResetFilter, onSelectPage
   } = opts;
 
   const isNovel = category === 'Novel';
+  const hasSearch = Boolean(String(searchQuery || '').trim());
   const filtered = filterBooksList(books, isNovel ? roleFilter : 'all', searchQuery);
+  const hideEmptySection = !isNovel && filtered.length === 0 && !hasSearch;
+  if (sectionEl instanceof HTMLElement) sectionEl.hidden = hideEmptySection;
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const slice = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -214,11 +209,15 @@ function renderShelfSection(opts) {
   const swipeCueEl = q('[data-shelf-swipe-cue]');
   const gridEl = q('[data-shelf-grid]');
 
-  const showToolbar = filtered.length > 4;
-  const showPager = totalPages > 1;
-
   if (countEl) countEl.textContent = `${filtered.length} Karya`;
-  if (toolbarEl instanceof HTMLElement) toolbarEl.hidden = !showToolbar;
+  if (hideEmptySection) {
+    if (gridEl) gridEl.innerHTML = '';
+    if (swipeCueEl instanceof HTMLElement) swipeCueEl.hidden = true;
+    return { page: 1, totalPages: 1, totalItems: 0, isHidden: true };
+  }
+
+  const showPager = totalPages > 1;
+  if (toolbarEl instanceof HTMLElement) toolbarEl.hidden = filtered.length <= 4;
   if (pageSizeBtn) {
     pageSizeBtn.textContent = `${pageSize} / Hal`;
     pageSizeBtn.setAttribute('aria-pressed', pageSize >= 8 ? 'true' : 'false');
@@ -259,29 +258,10 @@ function renderShelfSection(opts) {
   gridEl.classList.toggle('is-eight-grid', pageSize >= 8 && slice.length > 4);
 
   if (!slice.length) {
-    const hasFilter = Boolean(String(searchQuery || '').trim()) || (isNovel && roleFilter !== 'all');
-    if (isNovel) {
-      gridEl.innerHTML = `
-        <article class="empty-stage-note">
-          <h2>Buku Tidak Ditemukan</h2>
-          <p>Tidak ada novel yang cocok dengan pencarian atau filter peran saat ini.</p>
-          <div style="margin-top: 10px;">
-            <button type="button" class="primary-btn" data-reset-shelf="1">Tampilkan Semua Novel</button>
-          </div>
-        </article>
-      `;
-    } else {
-      gridEl.innerHTML = `
-        <article class="editorial-empty-card">
-          <p>${
-            hasFilter
-              ? `Tidak ada karya ${escapeHtml(category)} yang cocok dengan pencarian saat ini.`
-              : `Belum ada koleksi ${escapeHtml(category)} yang dipublikasikan.`
-          }</p>
-          ${hasFilter ? '<button type="button" class="secondary-btn" data-reset-shelf="1">Tampilkan Semua</button>' : ''}
-        </article>
-      `;
-    }
+    const hasFilter = hasSearch || (isNovel && roleFilter !== 'all');
+    gridEl.innerHTML = isNovel
+      ? `<article class="empty-stage-note"><h2>Buku Tidak Ditemukan</h2><p>Tidak ada novel yang cocok dengan pencarian atau filter peran saat ini.</p><div style="margin-top: 10px;"><button type="button" class="primary-btn" data-reset-shelf="1">Tampilkan Semua Novel</button></div></article>`
+      : `<article class="editorial-empty-card"><p>${hasFilter ? `Tidak ada karya ${escapeHtml(category)} yang cocok dengan pencarian saat ini.` : `Belum ada koleksi ${escapeHtml(category)} yang dipublikasikan.`}</p>${hasFilter ? '<button type="button" class="secondary-btn" data-reset-shelf="1">Tampilkan Semua</button>' : ''}</article>`;
     gridEl.querySelector('[data-reset-shelf]')?.addEventListener('click', () => {
       playSfx('click');
       onResetFilter?.();
@@ -302,10 +282,9 @@ function bindJumpBar(jumpBarEl) {
   jumpBarEl.dataset.jumpBound = '1';
   jumpBarEl.addEventListener('click', (event) => {
     const btn = event.target instanceof HTMLElement ? event.target.closest('[data-antologi-jump]') : null;
-    if (!(btn instanceof HTMLElement)) return;
-    const targetSlug = btn.dataset.antologiJump || 'novel';
-    const secEl = document.getElementById(`sec-antologi-${targetSlug}`);
-    if (!secEl) return;
+    if (!(btn instanceof HTMLButtonElement) || btn.disabled) return;
+    const secEl = document.getElementById(`sec-antologi-${btn.dataset.antologiJump || 'novel'}`);
+    if (!secEl || secEl.hidden) return;
     playSfx('click');
     for (const chip of jumpBarEl.querySelectorAll('[data-antologi-jump]')) {
       chip.classList.toggle('is-active', chip === btn);
@@ -318,24 +297,13 @@ function bindJumpBar(jumpBarEl) {
  * Merender ketiga section Etalase Antologi (Novel, Cerpen, Puisi) dengan paginasi & swipe seragam.
  */
 export function renderAntologiSections({
-  books = [],
-  roleFilter = 'all',
-  searchQuery = '',
-  shelfState = {},
-  jumpBarEl,
-  onSelectPage,
-  onOpenBook,
-  onQuickLike,
-  onResetFilter
+  books = [], roleFilter = 'all', searchQuery = '', shelfState = {},
+  jumpBarEl, onSelectPage, onOpenBook, onQuickLike, onResetFilter
 }) {
   const buckets = partitionAntologiBooks(books);
-  const sections = [
-    ['novel', 'Novel'],
-    ['cerpen', 'Cerpen'],
-    ['puisi', 'Puisi']
-  ];
-
+  const sections = [['novel', 'Novel'], ['cerpen', 'Cerpen'], ['puisi', 'Puisi']];
   const results = {};
+
   for (const [key, category] of sections) {
     const state = shelfState[key] || { page: 1, pageSize: 4 };
     results[key] = renderShelfSection({
@@ -355,11 +323,31 @@ export function renderAntologiSections({
 
   if (jumpBarEl) {
     bindJumpBar(jumpBarEl);
+    let activeHidden = false;
     for (const chip of jumpBarEl.querySelectorAll('[data-antologi-jump]')) {
       const key = chip.getAttribute('data-antologi-jump') || '';
-      const label = key ? `${key.charAt(0).toUpperCase()}${key.slice(1)}` : '';
-      if (label && results[key] !== undefined) chip.textContent = `${label} (${results[key].totalItems})`;
+      const info = results[key];
+      if (key && info !== undefined) {
+        chip.textContent = `${key.charAt(0).toUpperCase()}${key.slice(1)} (${info.totalItems})`;
+        const isDisabled = Boolean(info.isHidden);
+        if (chip instanceof HTMLButtonElement) chip.disabled = isDisabled;
+        chip.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+        if (isDisabled && chip.classList.contains('is-active')) {
+          chip.classList.remove('is-active');
+          activeHidden = true;
+        }
+      }
     }
+    if (activeHidden) jumpBarEl.querySelector('[data-antologi-jump="novel"]')?.classList.add('is-active');
+  }
+
+  const summaryEl = document.getElementById('antologi-empty-summary');
+  if (summaryEl) {
+    const hiddenNames = sections.filter(([key]) => results[key]?.isHidden).map(([, label]) => label);
+    summaryEl.hidden = hiddenNames.length === 0;
+    summaryEl.textContent = hiddenNames.length
+      ? `Koleksi ${hiddenNames.join(' dan ')} belum memiliki karya terbit.`
+      : '';
   }
 
   return results;

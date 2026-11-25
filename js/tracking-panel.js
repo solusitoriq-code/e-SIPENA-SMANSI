@@ -4,6 +4,7 @@
  */
 
 import { playSfx } from './audio.js';
+import { createBookReaderController } from './book-reader-ui.js';
 import { getTrackingHistory, trackSubmission } from './data-service.js';
 import {
   createIcon,
@@ -144,17 +145,56 @@ export function renderTrackResult(container, outcome) {
 
   box.querySelector('#btn-track-preview-pdf')?.addEventListener('click', () => {
     playSfx('pop');
-    openModal({
+    let readerController = null;
+    const isOnline = typeof navigator === 'undefined' || navigator.onLine !== false;
+    const bodyEl = openModal({
       title: `Berkas PDF: ${sub.title}`,
       wide: true,
+      fullscreen: true,
+      onClose: () => readerController?.destroy(),
       html: `
-        <div class="reader-toolbar">
-          <span>Kode Lacak: <strong>${escapeHtml(sub.tracking_code)}</strong></span>
-          <a class="secondary-btn inline-action-btn" href="${escapeHtml(gdrive.openUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('external')}<span>Buka di Drive</span></a>
+        <div class="book-modal-shell track-pdf-shell">
+          <div class="reader-toolbar track-pdf-bar">
+            <span>Kode Lacak: <strong class="code-chip">${escapeHtml(sub.tracking_code)}</strong></span>
+            ${gdrive.openUrl ? `<a class="secondary-btn inline-action-btn" href="${escapeHtml(gdrive.openUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('external')}<span>Buka di Drive</span></a>` : ''}
+          </div>
+          <section class="book-modal-pane is-active" data-pane="reader">
+            <div class="reader-stage-shell">
+              <div class="reader-stage-view" data-reader-stage="drive">
+                <div id="pdf-reader-stage-content" class="pdf-loading-note">Menyiapkan pratinjau PDF...</div>
+              </div>
+              <div class="reader-stage-view" data-reader-stage="text" hidden>
+                <div id="text-offline-banner" class="offline-reader-notice" hidden></div>
+                ${
+                  isOnline && gdrive.previewUrl
+                    ? `<iframe class="pdf-preview-iframe" src="${escapeHtml(gdrive.previewUrl)}" title="Pratinjau PDF ${escapeHtml(sub.title)}" loading="lazy" allowfullscreen></iframe>`
+                    : `<article class="literary-reader-paper"><p>${escapeHtml(sub.summary || notes || 'Pratinjau PDF tidak tersedia dalam mode offline.')}</p></article>`
+                }
+              </div>
+            </div>
+          </section>
         </div>
-        <iframe class="pdf-preview-iframe" src="${escapeHtml(gdrive.previewUrl)}" title="Pratinjau PDF ${escapeHtml(sub.title)}" loading="lazy" allowfullscreen></iframe>
       `
     });
+    if (!bodyEl) return;
+
+    const dialogEl = document.getElementById('app-modal');
+    dialogEl?.classList.add('is-reading-mode');
+    readerController = createBookReaderController({
+      bodyEl,
+      book: sub,
+      gdrive,
+      animateCover: false,
+      onStageChange: (viewName) => {
+        for (const stage of bodyEl.querySelectorAll('[data-reader-stage]')) {
+          stage.toggleAttribute('hidden', stage.getAttribute('data-reader-stage') !== viewName);
+        }
+        if (viewName === 'drive') {
+          window.requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+        }
+      }
+    });
+    readerController.activateReader();
   });
 }
 

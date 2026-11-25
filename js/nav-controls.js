@@ -121,6 +121,7 @@ export function bindTopHudAndDrawer({ onSelectTab }) {
   });
   document.addEventListener('fullscreenchange', syncFsLabel);
 
+  window.addEventListener('esipena:audio-mute-changed', updateAudioButtonUi);
   document.getElementById('btn-audio-toggle')?.addEventListener('click', () => {
     const muted = toggleMute();
     updateAudioButtonUi();
@@ -128,6 +129,13 @@ export function bindTopHudAndDrawer({ onSelectTab }) {
   });
 
   bindInstallButton();
+
+  for (const btn of document.querySelectorAll('#hub-nav [data-hub-tab]')) {
+    btn.addEventListener('click', () => {
+      playSfx('click');
+      onSelectTab(btn.getAttribute('data-hub-tab') || 'rak');
+    });
+  }
 
   document.getElementById('btn-drawer-toggle')?.addEventListener('click', () => {
     playSfx('click');
@@ -164,6 +172,15 @@ export function bindTopHudAndDrawer({ onSelectTab }) {
   });
 }
 
+function isElementFocusable(el) {
+  return (
+    el instanceof HTMLElement &&
+    el.offsetParent !== null &&
+    !el.closest('[hidden], [inert]') &&
+    window.getComputedStyle(el).visibility !== 'hidden'
+  );
+}
+
 function moveSpatialFocus(currentEl, direction, scopeEl = null) {
   const roots = scopeEl
     ? [scopeEl]
@@ -173,7 +190,16 @@ function moveSpatialFocus(currentEl, direction, scopeEl = null) {
   const sel = 'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]';
   const candidates = roots
     .flatMap((root) => [...root.querySelectorAll(sel)])
-    .filter((el) => el instanceof HTMLElement && el.offsetParent !== null && !el.closest('[hidden]'));
+    .filter(isElementFocusable);
+  if (!candidates.length) return;
+
+  if (scopeEl && currentEl === scopeEl) {
+    const first = candidates[0];
+    first.focus({ preventScroll: true });
+    first.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    return;
+  }
+
   const curRect = currentEl.getBoundingClientRect();
   const cx = curRect.left + curRect.width / 2;
   const cy = curRect.top + curRect.height / 2;
@@ -186,12 +212,15 @@ function moveSpatialFocus(currentEl, direction, scopeEl = null) {
     const r = el.getBoundingClientRect();
     const dx = r.left + r.width / 2 - cx;
     const dy = r.top + r.height / 2 - cy;
-    if ((direction === 'ArrowRight' && dx <= 8) || (direction === 'ArrowLeft' && dx >= -8)) continue;
-    if ((direction === 'ArrowDown' && dy <= 8) || (direction === 'ArrowUp' && dy >= -8)) continue;
+    if ((direction === 'ArrowRight' && dx <= 4) || (direction === 'ArrowLeft' && dx >= -4)) continue;
+    if ((direction === 'ArrowDown' && dy <= 4) || (direction === 'ArrowUp' && dy >= -4)) continue;
     const score = (horiz ? Math.abs(dx) : Math.abs(dy)) + (horiz ? Math.abs(dy) : Math.abs(dx)) * 2.4;
     if (score < bestScore) { bestScore = score; best = el; }
   }
-  if (best instanceof HTMLElement) best.focus();
+  if (best instanceof HTMLElement) {
+    best.focus({ preventScroll: true });
+    best.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 }
 
 /**
@@ -216,7 +245,7 @@ export function bindKeyboardAndModalControls({ onTurnBookPage }) {
     if (isModalOpen() && event.key === 'Tab') {
       const dialog = document.getElementById('app-modal');
       const focusables = dialog
-        ? [...dialog.querySelectorAll('button:not(:disabled), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((el) => el instanceof HTMLElement && !el.closest('[hidden]'))
+        ? [...dialog.querySelectorAll('button:not(:disabled), a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter(isElementFocusable)
         : [];
       if (focusables.length > 0) {
         const first = focusables[0];
@@ -232,18 +261,32 @@ export function bindKeyboardAndModalControls({ onTurnBookPage }) {
 
     const isArrow = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key);
     if (isModalOpen()) {
+      const dialog = document.getElementById('app-modal');
+      const pdfShell = dialog?.querySelector('.pdf-slide-shell');
+      const inPdfReader = Boolean(dialog?.classList.contains('is-reading-mode') && pdfShell && !pdfShell.closest('[hidden]'));
+      const inOpenPdfToolbar = Boolean(activeEl instanceof HTMLElement && activeEl.closest('#pdf-slide-toolbar:not([inert])'));
+      if (inPdfReader && (event.key === 'PageUp' || event.key === 'PageDown' || (!inOpenPdfToolbar && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')))) {
+        return;
+      }
       if (isArrow && activeEl instanceof HTMLElement && activeEl.closest('#app-modal')) {
-        const inPdf = activeEl.closest('#pdf-reader-stage-content');
-        if (inPdf && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) return;
         event.preventDefault();
-        moveSpatialFocus(activeEl, event.key, document.getElementById('app-modal'));
+        moveSpatialFocus(activeEl, event.key, dialog);
       }
       return;
     }
 
-    if (isArrow && activeEl instanceof HTMLElement && activeEl.closest('#top-hud, #stage-main')) {
-      event.preventDefault();
-      moveSpatialFocus(activeEl, event.key);
+    if (isArrow) {
+      if (activeEl instanceof HTMLElement && activeEl.closest('#top-hud, #stage-main')) {
+        event.preventDefault();
+        moveSpatialFocus(activeEl, event.key);
+      } else {
+        const fallback = document.querySelector('#stage-main .hub-panel.is-active button:not(:disabled), #top-hud button:not(:disabled)');
+        if (isElementFocusable(fallback)) {
+          event.preventDefault();
+          fallback.focus({ preventScroll: true });
+          fallback.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+      }
     } else if (event.key === 'PageDown' || event.key === 'PageUp') {
       event.preventDefault();
       onTurnBookPage(event.key === 'PageDown' ? 1 : -1);

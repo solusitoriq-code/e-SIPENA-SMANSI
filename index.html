@@ -49,6 +49,21 @@
         </div>
       </div>
 
+      <!-- Navigasi Tab Horizontal Desktop & TV Android -->
+      <nav class="hub-nav" id="hub-nav" aria-label="Menu utama portal">
+        <div class="hub-nav-group">
+          <button class="hub-tab is-active" type="button" data-hub-tab="rak" aria-current="page">Etalase Antologi</button>
+          <button class="hub-tab" type="button" data-hub-tab="pameran-3d">Pameran 3D Gresik</button>
+          <button class="hub-tab" type="button" data-hub-tab="cerita-gresik">Cerita Gresik</button>
+          <button class="hub-tab" type="button" data-hub-tab="mading">Mading Digital</button>
+          <button class="hub-tab" type="button" data-hub-tab="pustakawan">Sudut Pustakawan</button>
+        </div>
+        <span class="hub-divider" aria-hidden="true"></span>
+        <div class="hub-nav-utility">
+          <button class="hub-tab hub-tab-utility" type="button" data-hub-tab="kelola">Ruang Pengelola</button>
+        </div>
+      </nav>
+
       <!-- Kontrol Utilitas HUD (Hanya Suara & Pasang) -->
       <div class="hud-actions">
         <button id="btn-audio-toggle" class="hud-btn" type="button" aria-pressed="false" aria-label="Bisukan suara UI">
@@ -67,7 +82,7 @@
             <polyline points="7 10 12 15 17 10"></polyline>
             <path d="M5 21h14"></path>
           </svg>
-          <!-- <span>Pasang</span> -->
+          <span>Pasang</span>
         </button>
       </div>
     </header>
@@ -80,8 +95,10 @@
           <nav class="antologi-jump-bar" id="antologi-jump-bar" aria-label="Navigasi jenis antologi">
             <button class="filter-chip antologi-jump-chip is-active" type="button" data-antologi-jump="novel">Novel
               (12)</button>
-            <button class="filter-chip antologi-jump-chip" type="button" data-antologi-jump="cerpen">Cerpen (0)</button>
-            <button class="filter-chip antologi-jump-chip" type="button" data-antologi-jump="puisi">Puisi (0)</button>
+            <button class="filter-chip antologi-jump-chip" type="button" data-antologi-jump="cerpen" disabled
+              aria-disabled="true">Cerpen (0)</button>
+            <button class="filter-chip antologi-jump-chip" type="button" data-antologi-jump="puisi" disabled
+              aria-disabled="true">Puisi (0)</button>
           </nav>
           <label class="search-box antologi-search-box" for="book-search-input">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -116,7 +133,6 @@
                   <h2 id="heading-sec-novel" class="antologi-sec-title">Novel</h2>
                   <span id="novel-count-badge" class="panel-badge" data-shelf-count>12 Karya</span>
                 </div>
-                <p class="antologi-sec-desc">Karya novel antologi siswa dan guru SMAN 1 Sidayu.</p>
               </div>
               <div class="antologi-novel-controls">
                 <div class="filter-group" role="group" aria-label="Saring penulis novel">
@@ -182,7 +198,7 @@
 
           <!-- Section 2: Cerpen -->
           <section class="antologi-section antologi-section-editorial" id="sec-antologi-cerpen"
-            data-shelf-section="cerpen" aria-labelledby="heading-sec-cerpen">
+            data-shelf-section="cerpen" aria-labelledby="heading-sec-cerpen" hidden>
             <div class="antologi-section-head">
               <div class="antologi-sec-meta">
                 <div class="antologi-sec-title-row">
@@ -238,7 +254,7 @@
 
           <!-- Section 3: Puisi -->
           <section class="antologi-section antologi-section-editorial antologi-section-puisi" id="sec-antologi-puisi"
-            data-shelf-section="puisi" aria-labelledby="heading-sec-puisi">
+            data-shelf-section="puisi" aria-labelledby="heading-sec-puisi" hidden>
             <div class="antologi-section-head">
               <div class="antologi-sec-meta">
                 <div class="antologi-sec-title-row">
@@ -293,6 +309,7 @@
             <div id="puisi-swipe-cue" class="swipe-cue-bar" data-shelf-swipe-cue
               aria-label="Indikator geser halaman rak puisi" hidden></div>
           </section>
+          <p id="antologi-empty-summary" class="antologi-empty-summary" hidden></p>
         </div>
       </section>
 

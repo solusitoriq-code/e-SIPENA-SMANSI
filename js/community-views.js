@@ -6,7 +6,12 @@
 import { APP_CONFIG } from './config.js';
 import { playSfx, stopSpeech } from './audio.js';
 import { openLibrarianActivityDetailModal } from './activity-modal.js';
-import { createBookReaderController } from './book-reader-ui.js';
+import {
+  bindTextReaderControls,
+  createBookReaderController,
+  getReaderPrefs,
+  renderTextReaderToolbarHtml
+} from './book-reader-ui.js';
 import { normalizeActivityPhotos } from './data-service.js';
 import { openModel3dModal } from './model-3d-modal.js';
 import {
@@ -15,7 +20,6 @@ import {
   escapeHtml,
   extractPlainLiteraryText,
   formatDateId,
-  getRoleBadgeClass,
   openModal,
   renderFormattedLiteraryHtml,
   renderSwipeCueHtml,
@@ -79,13 +83,20 @@ export function renderModels3dPanel(container, { models = [] } = {}) {
 }
 
 function buildMadingMetaHtml(work) {
+  const roleLabel = work.author_role
+    ? `${work.author_role}${work.author_class_unit ? ` (${work.author_class_unit})` : ''}`
+    : (work.author_class_unit || '');
+  const metaParts = [
+    work.category || 'Karya',
+    roleLabel,
+    formatDateId(work.published_at)
+  ].filter(Boolean);
+
   return `
-    <div class="mading-modal-badges">
+    <div class="book-editorial-meta mading-editorial-meta">
       <span class="status-tag is-lolos">${escapeHtml(work.status || 'Lolos Mading')}</span>
-      <span class="panel-badge">${escapeHtml(work.category || 'Karya')}</span>
-      <span class="${getRoleBadgeClass(work.author_role)}">${escapeHtml(work.author_role || 'Warga Sekolah')}</span>
-      <span class="panel-badge">${escapeHtml(work.author_class_unit || '-')}</span>
-      <span class="panel-badge">${escapeHtml(formatDateId(work.published_at))}</span>
+      <span class="meta-sep" aria-hidden="true">&middot;</span>
+      ${metaParts.map((part) => `<span>${escapeHtml(part)}</span>`).join('<span class="meta-sep" aria-hidden="true">&middot;</span>')}
     </div>
     <p class="mading-modal-author">Ditulis oleh <strong>${escapeHtml(work.author_name || '')}</strong>${work.tracking_code ? `<span class="code-chip">${escapeHtml(work.tracking_code)}</span>` : ''}</p>
     ${work.culture_theme ? `<div class="mading-theme-banner">Tema Budaya Gresik: <strong>${escapeHtml(work.culture_theme)}</strong></div>` : ''}`;
@@ -94,14 +105,17 @@ function buildMadingMetaHtml(work) {
 /**
  * Membuka modal baca lengkap untuk satu karya Mading Digital.
  * Karya berlampiran PDF dibuka penuh kanvas dengan pembaca PDF.js + cache offline;
- * karya teks langsung tampil dalam modal baca sastra.
+ * karya teks langsung tampil dalam modal baca sastra dengan kontrol huruf dan tema.
  * @param {Record<string, any>} work
  */
 export function openMadingWorkModal(work) {
   if (!work) return;
   const gdrive = resolveGDriveLinks(work);
+  const readerPrefs = getReaderPrefs();
   const bodyHtml = renderFormattedLiteraryHtml(work.body_text || work.summary || '', 'Ringkasan karya belum tersedia.');
   const metaHtml = buildMadingMetaHtml(work);
+  const paperClass = `literary-reader-paper${readerPrefs.theme === 'dark' ? ' is-dark' : ''}`;
+  const paperStyle = `font-size: ${readerPrefs.fontSize}px;`;
   const bindTts = (bodyEl, label) => bindSpeechToggleButton(
     bodyEl?.querySelector('#btn-mading-tts'),
     () => `${work.title}, karya ${work.author_name}. ${extractPlainLiteraryText(work.body_text || work.summary || '')}`,
@@ -110,18 +124,37 @@ export function openMadingWorkModal(work) {
   );
 
   if (!gdrive.hasDriveFile) {
+    const toolbarHtml = renderTextReaderToolbarHtml({
+      fontSize: readerPrefs.fontSize,
+      theme: readerPrefs.theme,
+      ttsId: 'btn-mading-tts',
+      ttsLabel: 'Dengar Karya'
+    });
     const bodyEl = openModal({
       title: work.title || 'Karya Mading Digital',
       wide: true,
       allowFullscreen: true,
       onClose: () => stopSpeech(),
-      html: `<div class="mading-modal-wrap">${metaHtml}<div class="mading-modal-controls"><button type="button" class="secondary-btn inline-action-btn" id="btn-mading-tts">${createIcon('volume')}<span>Dengar Karya</span></button></div><article class="literary-reader-paper">${bodyHtml}</article></div>`
+      html: `<div class="mading-modal-wrap">${metaHtml}${toolbarHtml}<article class="${paperClass}" style="${paperStyle}">${bodyHtml}</article></div>`
     });
+    bindTextReaderControls(bodyEl);
     bindTts(bodyEl, 'Dengar Karya');
     return;
   }
 
   let readerController = null;
+  const detailToolbarHtml = renderTextReaderToolbarHtml({
+    fontSize: readerPrefs.fontSize,
+    theme: readerPrefs.theme,
+    ttsId: 'btn-mading-tts',
+    ttsLabel: 'Dengar Ringkasan',
+    extraActionsHtml: `<button type="button" class="primary-btn inline-action-btn" id="btn-mading-switch-pdf">${createIcon('book')}<span>Baca Naskah (PDF)</span></button><a class="secondary-btn inline-action-btn" href="${escapeHtml(gdrive.openUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('external')}<span>Buka di Drive</span></a>`
+  });
+  const fallbackToolbarHtml = renderTextReaderToolbarHtml({
+    fontSize: readerPrefs.fontSize,
+    theme: readerPrefs.theme,
+    ttsId: ''
+  });
   const bodyEl = openModal({
     title: work.title || 'Karya Mading Digital',
     wide: true,
@@ -129,12 +162,13 @@ export function openMadingWorkModal(work) {
     headerTabsHtml: `<button type="button" class="modal-hdr-tab" role="tab" aria-selected="false" data-modal-pane="detail">Info &amp; Ringkasan</button><button type="button" class="modal-hdr-tab is-active" role="tab" aria-selected="true" data-modal-pane="reader" data-autofocus>Baca Naskah</button>`,
     onClose: () => { stopSpeech(); readerController?.destroy(); },
     html: `<div class="book-modal-shell">
-      <section class="book-modal-pane" data-pane="detail" hidden><div class="mading-modal-wrap">${metaHtml}<div class="mading-modal-controls"><button type="button" class="primary-btn inline-action-btn" id="btn-mading-switch-pdf">${createIcon('book')}<span>Baca Naskah (PDF)</span></button><button type="button" class="secondary-btn inline-action-btn" id="btn-mading-tts">${createIcon('volume')}<span>Dengar Ringkasan</span></button><a class="secondary-btn inline-action-btn" href="${escapeHtml(gdrive.openUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('external')}<span>Buka di Drive</span></a></div><article class="literary-reader-paper">${bodyHtml}</article></div></section>
-      <section class="book-modal-pane is-active" data-pane="reader"><div class="reader-stage-shell"><div class="reader-stage-view" data-reader-stage="drive"><div id="pdf-reader-stage-content" class="pdf-loading-note">Menyiapkan PDF naskah Mading...</div></div><div class="reader-stage-view" data-reader-stage="text" hidden><div id="text-offline-banner" class="offline-reader-notice" hidden></div><article class="literary-reader-paper">${bodyHtml}</article></div></div></section>
+      <section class="book-modal-pane" data-pane="detail" hidden><div class="mading-modal-wrap">${metaHtml}${detailToolbarHtml}<article class="${paperClass}" style="${paperStyle}">${bodyHtml}</article></div></section>
+      <section class="book-modal-pane is-active" data-pane="reader"><div class="reader-stage-shell"><div class="reader-stage-view" data-reader-stage="drive"><div id="pdf-reader-stage-content" class="pdf-loading-note">Menyiapkan PDF naskah Mading...</div></div><div class="reader-stage-view" data-reader-stage="text" hidden><div id="text-offline-banner" class="offline-reader-notice" hidden></div>${fallbackToolbarHtml}<article class="${paperClass}" style="${paperStyle}">${bodyHtml}</article></div></div></section>
     </div>`
   });
   if (!bodyEl) return;
 
+  bindTextReaderControls(bodyEl);
   const dialogEl = document.getElementById('app-modal');
   dialogEl?.classList.add('is-reading-mode');
   readerController = createBookReaderController({

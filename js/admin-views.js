@@ -132,17 +132,21 @@ function renderSubmissionsList(listWrap) {
       .map(
         (work) => `
                 <tr>
-                  <td><span class="code-chip">${escapeHtml(work.tracking_code || '-')}</span></td>
-                  <td>
-                    <strong class="table-title">${escapeHtml(work.title)}</strong>
-                    <div class="table-sub">${escapeHtml(work.author_name)} &middot; ${escapeHtml(work.author_class_unit || '-')}</div>
+                  <td data-label="Kode"><span class="code-chip">${escapeHtml(work.tracking_code || '-')}</span></td>
+                  <td data-label="Judul &amp; Penulis">
+                    <div class="admin-td-val">
+                      <strong class="table-title">${escapeHtml(work.title)}</strong>
+                      <div class="table-sub">${escapeHtml(work.author_name)} &middot; ${escapeHtml(work.author_class_unit || '-')}</div>
+                    </div>
                   </td>
-                  <td>
-                    <span class="${getRoleBadgeClass(work.author_role)}">${escapeHtml(work.author_role)}</span>
-                    <div class="table-sub">${escapeHtml(work.category || '-')}</div>
+                  <td data-label="Peran &amp; Kategori">
+                    <div class="admin-td-val">
+                      <span class="${getRoleBadgeClass(work.author_role)}">${escapeHtml(work.author_role)}</span>
+                      <div class="table-sub">${escapeHtml(work.category || '-')}</div>
+                    </div>
                   </td>
-                  <td><span class="${getAdminStatusClass(work.status)}">${escapeHtml(work.status)}</span></td>
-                  <td>
+                  <td data-label="Status"><span class="${getAdminStatusClass(work.status)}">${escapeHtml(work.status)}</span></td>
+                  <td data-label="Aksi" class="admin-td-action">
                     <button type="button" class="primary-btn admin-row-btn" data-curate-id="${escapeHtml(work.id)}">Kurasi</button>
                   </td>
                 </tr>

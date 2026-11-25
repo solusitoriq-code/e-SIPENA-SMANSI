@@ -185,7 +185,7 @@ function bindMobileKeyboardScrollGuard() {
 }
 
 /**
- * Mengaktifkan salah satu tab/panel Hub utama dan menyinkronkan Drawer.
+ * Mengaktifkan salah satu tab/panel Hub utama dan menyinkronkan Top HUD serta Drawer.
  * @param {string} tabId
  * @param {{ focusPanel?: boolean }} [options]
  */
@@ -196,11 +196,12 @@ export function switchTab(tabId, { focusPanel = false } = {}) {
   }
   appState.activeTab = nextTab;
 
-  for (const drawerBtn of document.querySelectorAll('#drawer-links [data-drawer-tab]')) {
-    const active = drawerBtn.getAttribute('data-drawer-tab') === nextTab;
-    drawerBtn.classList.toggle('is-active', active);
-    if (active) drawerBtn.setAttribute('aria-current', 'page');
-    else drawerBtn.removeAttribute('aria-current');
+  for (const navBtn of document.querySelectorAll('#drawer-links [data-drawer-tab], #hub-nav [data-hub-tab]')) {
+    const tabKey = navBtn.getAttribute('data-drawer-tab') || navBtn.getAttribute('data-hub-tab');
+    const active = tabKey === nextTab;
+    navBtn.classList.toggle('is-active', active);
+    if (active) navBtn.setAttribute('aria-current', 'page');
+    else navBtn.removeAttribute('aria-current');
   }
   for (const panel of document.querySelectorAll('#stage-main .hub-panel')) {
     const active = panel.getAttribute('data-panel') === nextTab;

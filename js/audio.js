@@ -93,10 +93,14 @@ export function isMuted() {
  * @returns {boolean}
  */
 export function setMuted(nextMuted) {
+  const prev = mutedState;
   mutedState = Boolean(nextMuted);
   SafeStorage.setItem(AUDIO_MUTE_KEY, mutedState ? '1' : '0');
   if (mutedState) {
     stopSpeech();
+  }
+  if (prev !== mutedState && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('esipena:audio-mute-changed', { detail: { muted: mutedState } }));
   }
   return mutedState;
 }
