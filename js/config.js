@@ -25,6 +25,7 @@ export const APP_CONFIG = Object.freeze({
   MAX_CATALOG_PDF_SIZE_BYTES: 16 * 1024 * 1024, // 16 MiB khusus PDF buku kurator
   BOOK_PAGE_SIZE: 4,
   MADING_PAGE_SIZE: 6,
+  ENABLE_ADMIN_WA_CHAT: false, // Sembunyikan tombol chat WA Admin/Pustakawan hingga nomor aktif tersedia
 
   // 5. Kunci penyimpanan lokal (SafeStorage)
   STORAGE_KEYS: Object.freeze({

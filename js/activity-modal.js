@@ -5,6 +5,7 @@
  */
 
 import { playSfx } from './audio.js';
+import { APP_CONFIG } from './config.js';
 import { normalizeActivityPhotos } from './data-service.js';
 import { bindHorizontalSwipe } from './nav-controls.js';
 import { buildWhatsAppUrl, createIcon, escapeHtml, openModal } from './ui-utils.js';
@@ -21,10 +22,13 @@ export function openLibrarianActivityDetailModal(activity, contactAdmin = {}) {
   const displayPhotos = photos.length ? photos : [{ url: FALLBACK_PHOTO, name: activity?.title || 'Kegiatan' }];
   const hasMultiple = displayPhotos.length > 1;
   const description = String(activity?.description || '').trim();
-  const waUrl = buildWhatsAppUrl(
-    contactAdmin,
-    `saya ingin menanyakan kegiatan "${activity?.title || 'Sudut Pustakawan'}".`
-  );
+  const showWaButton = Boolean(APP_CONFIG.ENABLE_ADMIN_WA_CHAT);
+  const waUrl = showWaButton
+    ? buildWhatsAppUrl(
+        contactAdmin,
+        `saya ingin menanyakan kegiatan "${activity?.title || 'Sudut Pustakawan'}".`
+      )
+    : '';
 
   let currentIdx = 0;
 
@@ -62,9 +66,15 @@ export function openLibrarianActivityDetailModal(activity, contactAdmin = {}) {
 
         ${description ? `<p class="activity-modal-desc">${escapeHtml(description)}</p>` : ''}
 
-        <div class="librarian-modal-actions">
-          <a class="secondary-btn inline-action-btn" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('whatsapp')}<span>Tanya Pustakawan via WA</span></a>
-        </div>
+        ${
+          showWaButton && waUrl
+            ? `
+              <div class="librarian-modal-actions">
+                <a class="secondary-btn inline-action-btn" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('whatsapp')}<span>Tanya Pustakawan via WA</span></a>
+              </div>
+            `
+            : ''
+        }
       </div>
     `
   });
