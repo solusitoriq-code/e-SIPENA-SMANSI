@@ -6,6 +6,7 @@
 
 import { APP_CONFIG, isSupabaseConfigured } from './config.js';
 import { normalizeActivityRecord } from './admin-activity-service.js';
+import { normalizeCeritaVideoRecord } from './cerita-gresik-service.js';
 import {
   SafeStorage,
   applyDemoOverridesToDataset,
@@ -58,6 +59,14 @@ export {
   normalizeActivityPhotos
 } from './admin-activity-service.js';
 export {
+  adminCreateCeritaVideo,
+  adminDeleteCeritaVideo,
+  adminListAllCeritaVideos,
+  adminSaveCeritaVideo,
+  normalizeCeritaVideoUrl,
+  parseCeritaVideoUrl
+} from './cerita-gresik-service.js';
+export {
   compressCoverToWebp,
   uploadActivityPhotoToGDrive,
   uploadCoverImageToGDrive
@@ -72,6 +81,7 @@ const portalState = {
   books: [],
   models3d: [],
   librarianActivities: [],
+  ceritaGresikVideos: [],
   madingWorks: [],
   siteSettings: {}
 };
@@ -147,6 +157,7 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
     books: [],
     models_3d: [],
     librarian_activities: [],
+    cerita_gresik_videos: [],
     public_mading_works: [],
     site_settings: {}
   };
@@ -179,6 +190,12 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
       : Array.isArray(localData.librarian_activities)
         ? localData.librarian_activities
         : [];
+  let ceritaGresikVideos =
+    useCachedRemote && Array.isArray(cachedRemote.ceritaGresikVideos)
+      ? cachedRemote.ceritaGresikVideos
+      : Array.isArray(localData.cerita_gresik_videos)
+        ? localData.cerita_gresik_videos
+        : [];
   let madingWorks =
     useCachedRemote && Array.isArray(cachedRemote.madingWorks)
       ? cachedRemote.madingWorks
@@ -196,10 +213,11 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
     isSupabaseConfigured() && (typeof navigator === 'undefined' || navigator.onLine !== false);
 
   if (canTrySupabase) {
-    const [booksRes, modelsRes, activitiesRes, madingRes, settingsRes] = await Promise.allSettled([
+    const [booksRes, modelsRes, activitiesRes, ceritaRes, madingRes, settingsRes] = await Promise.allSettled([
       fetchSupabaseJson('/rest/v1/books?select=*&is_published=eq.true&order=sort_order.asc,title.asc'),
       fetchSupabaseJson('/rest/v1/models_3d?select=*&is_active=eq.true&order=sort_order.asc'),
       fetchSupabaseJson('/rest/v1/librarian_activities?select=*&is_active=eq.true&order=sort_order.asc,created_at.desc'),
+      fetchSupabaseJson('/rest/v1/cerita_gresik_videos?select=*&is_active=eq.true&order=sort_order.asc,created_at.desc'),
       fetchSupabaseJson('/rest/v1/public_mading_works?select=*&order=published_at.desc'),
       fetchSupabaseJson('/rest/v1/site_settings?select=key,value,description,is_placeholder&is_public=eq.true')
     ]);
@@ -227,12 +245,21 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
       siteSettings = mergeSiteSettings(localData.site_settings || {}, settingsRes.value);
       source = 'supabase';
     }
+    if (ceritaRes.status === 'fulfilled' && Array.isArray(ceritaRes.value)) {
+      ceritaGresikVideos = ceritaRes.value.map(normalizeCeritaVideoRecord);
+      source = 'supabase';
+    } else if (Array.isArray(siteSettings?.cerita_gresik_videos?.items)) {
+      ceritaGresikVideos = siteSettings.cerita_gresik_videos.items
+        .map(normalizeCeritaVideoRecord)
+        .filter((v) => v.is_active !== false);
+    }
 
     if (source === 'supabase') {
       SafeStorage.setJson(CACHED_SNAPSHOT_KEY, {
         books,
         models3d,
         librarianActivities,
+        ceritaGresikVideos,
         madingWorks,
         siteSettings
       });
@@ -244,6 +271,7 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
       books: applyLocalLikeDeltas(books),
       models3d,
       librarianActivities,
+      ceritaGresikVideos,
       madingWorks,
       localSubmissions: getLocalSubmissions(),
       siteSettings
@@ -251,6 +279,7 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
     books = demoPatched.books;
     models3d = demoPatched.models3d;
     librarianActivities = demoPatched.librarianActivities.map(normalizeActivityRecord);
+    ceritaGresikVideos = demoPatched.ceritaGresikVideos.map(normalizeCeritaVideoRecord);
     madingWorks = demoPatched.madingWorks;
     siteSettings = demoPatched.siteSettings;
   }
@@ -262,22 +291,22 @@ export async function loadPortalData({ forceRefresh = false } = {}) {
   portalState.librarianActivities = [...librarianActivities]
     .map(normalizeActivityRecord)
     .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+  portalState.ceritaGresikVideos = [...ceritaGresikVideos]
+    .map(normalizeCeritaVideoRecord)
+    .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
   portalState.madingWorks = [...madingWorks];
   portalState.siteSettings = siteSettings;
 
   return getPortalSnapshot();
 }
 
-/**
- * Mengembalikan salinan snapshot state data portal saat ini.
- * @returns {{ source: string, books: any[], models3d: any[], librarianActivities: any[], madingWorks: any[], siteSettings: Record<string, any> }}
- */
 export function getPortalSnapshot() {
   return {
     source: portalState.source,
     books: portalState.books,
     models3d: portalState.models3d,
     librarianActivities: portalState.librarianActivities,
+    ceritaGresikVideos: portalState.ceritaGresikVideos,
     madingWorks: portalState.madingWorks,
     siteSettings: portalState.siteSettings
   };

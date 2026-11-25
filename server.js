@@ -34,7 +34,7 @@ const MIME_TYPES = {
 };
 
 const SPA_ROUTES = new Set([
-  '/', '/rak', '/pameran-3d', '/mading', '/pustakawan', '/kirim', '/lacak', '/kelola', '/cetak-qr'
+  '/', '/rak', '/pameran-3d', '/cerita-gresik', '/mading', '/pustakawan', '/kirim', '/lacak', '/kelola', '/cetak-qr'
 ]);
 
 function getContentType(filePath) {

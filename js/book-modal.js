@@ -24,6 +24,7 @@ import {
 const READER_FONT_KEY = 'esipena_reader_font_px';
 const READER_THEME_KEY = 'esipena_reader_theme';
 const FALLBACK_COVER = 'assets/images/logo-smansi.webp';
+const DIRECT_READ_CATEGORIES = new Set(['cerpen', 'puisi']);
 
 function getReaderPrefs() {
   const rawSize = Number(SafeStorage.getItem(READER_FONT_KEY) || 16);
@@ -60,27 +61,23 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
   const hasSynopsis = Boolean(extractPlainLiteraryText(book.synopsis || ''));
 
   const canTryPdf = gdrive.hasDriveFile;
-  const startSection = initialMode === 'read' ? 'reader' : 'detail';
+  const isDirectRead = DIRECT_READ_CATEGORIES.has(String(book.category || '').trim().toLowerCase());
+  const startSection = isDirectRead || initialMode === 'read' ? 'reader' : 'detail';
   const defaultStage = canTryPdf ? 'drive' : 'text';
   const downloadFileName = `${book.slug || 'novel-smansi'}.pdf`;
 
   let readerController = null;
 
-  // <a class="secondary-btn inline-action-btn" id="btn-detail-download-pdf" href="${escapeHtml(gdrive.downloadUrl || '#')}" target="_blank" rel="noopener noreferrer" download="${escapeHtml(downloadFileName)}" ${gdrive.downloadUrl ? '' : 'hidden'}>${createIcon('download')}<span>Unduh PDF</span></a>
-  const bodyEl = openModal({
-    title: book.title || 'Detail Novel',
-    wide: true,
-    fullscreen: true,
-    headerTabsHtml: `
+  const headerTabsHtml = isDirectRead
+    ? ''
+    : `
       <button type="button" class="modal-hdr-tab${startSection === 'detail' ? ' is-active' : ''}" role="tab" aria-selected="${startSection === 'detail' ? 'true' : 'false'}" data-modal-pane="detail">Detail</button>
       <button type="button" class="modal-hdr-tab${startSection === 'reader' ? ' is-active' : ''}" role="tab" aria-selected="${startSection === 'reader' ? 'true' : 'false'}" data-modal-pane="reader"${startSection === 'reader' ? ' data-autofocus' : ''}>Baca Buku</button>
-    `,
-    onClose: () => {
-      stopSpeech();
-      readerController?.destroy();
-    },
-    html: `
-      <div class="book-modal-shell">
+    `;
+
+  const detailPaneHtml = isDirectRead
+    ? ''
+    : `
         <section class="book-modal-pane${startSection === 'detail' ? ' is-active' : ''}" data-pane="detail" ${startSection === 'detail' ? '' : 'hidden'}>
           <div class="book-detail-grid${hasCover ? '' : ' is-no-cover'}">
             ${
@@ -107,11 +104,26 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
                 <button type="button" class="primary-btn inline-action-btn" id="btn-switch-to-reader">${createIcon('book')}<span>${canTryPdf ? 'Baca Buku (PDF)' : 'Baca Buku'}</span></button>
                 ${hasSynopsis ? `<button type="button" class="secondary-btn inline-action-btn" id="btn-book-tts">${createIcon('volume')}<span>Dengar Sinopsis</span></button>` : ''}
                 <button type="button" class="like-pill-btn modal-like-btn${liked ? ' is-liked' : ''}" id="btn-modal-like" aria-pressed="${liked ? 'true' : 'false'}">${createIcon('heart')}<span id="modal-like-label">${liked ? 'Disukai' : 'Suka'} (${Number(book.likes_count || 0)})</span></button>
-                <a class="whatsapp-btn inline-action-btn" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('whatsapp')}<span>Pesan Cetak via WA</span></a>
+                <a class="whatsapp-btn inline-action-btn" id="btn-book-wa-order" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer" hidden>${createIcon('whatsapp')}<span>Pesan Cetak via WA</span></a>
               </div>
             </div>
           </div>
         </section>
+      `;
+
+  // <a class="secondary-btn inline-action-btn" id="btn-detail-download-pdf" href="${escapeHtml(gdrive.downloadUrl || '#')}" target="_blank" rel="noopener noreferrer" download="${escapeHtml(downloadFileName)}" ${gdrive.downloadUrl ? '' : 'hidden'}>${createIcon('download')}<span>Unduh PDF</span></a>
+  const bodyEl = openModal({
+    title: book.title || 'Detail Novel',
+    wide: true,
+    fullscreen: true,
+    headerTabsHtml,
+    onClose: () => {
+      stopSpeech();
+      readerController?.destroy();
+    },
+    html: `
+      <div class="book-modal-shell">
+        ${detailPaneHtml}
 
         <section class="book-modal-pane${startSection === 'reader' ? ' is-active' : ''}" data-pane="reader" ${startSection === 'reader' ? '' : 'hidden'}>
           <div class="reader-stage-shell">
@@ -167,6 +179,7 @@ export function openBookModal(book, { initialMode = 'detail', siteSettings = {},
     bodyEl,
     book,
     gdrive,
+    animateCover: !isDirectRead && hasCover,
     onStageChange: setReaderStage,
     onBlobUrlReady: (url) => {
       const btn = bodyEl.querySelector('#btn-detail-download-pdf');

@@ -11,6 +11,7 @@ import {
   adminGetSession,
   adminListAllActivities,
   adminListAllBooks,
+  adminListAllCeritaVideos,
   adminListAllModels3d,
   adminListWorks,
   adminSignIn,
@@ -308,12 +309,14 @@ async function renderAdminWorkspace(container) {
       let catalogBooks = snap?.books || [];
       let catalogModels3d = snap?.models3d || [];
       let catalogActivities = snap?.librarianActivities || [];
+      let catalogCeritaVideos = snap?.ceritaGresikVideos || [];
       let activitiesError = '';
 
-      const [booksRes, modelsRes, activitiesRes] = await Promise.allSettled([
+      const [booksRes, modelsRes, activitiesRes, ceritaRes] = await Promise.allSettled([
         adminListAllBooks(catalogBooks),
         adminListAllModels3d(catalogModels3d),
-        adminListAllActivities(catalogActivities)
+        adminListAllActivities(catalogActivities),
+        adminListAllCeritaVideos(catalogCeritaVideos)
       ]);
       if (booksRes.status === 'fulfilled') catalogBooks = booksRes.value;
       if (modelsRes.status === 'fulfilled') catalogModels3d = modelsRes.value;
@@ -322,12 +325,14 @@ async function renderAdminWorkspace(container) {
       } else if (activitiesRes.reason?.code === 'MIGRATION_REQUIRED') {
         activitiesError = activitiesRes.reason.message;
       }
+      if (ceritaRes.status === 'fulfilled') catalogCeritaVideos = ceritaRes.value;
 
       renderCatalogManager(katalogPane, {
         snapshot: snap,
         catalogBooks,
         catalogModels3d,
         catalogActivities,
+        catalogCeritaVideos,
         activitiesError,
         subSection: adminUiState.catalogSection,
         onSelectSubSection: (sec) => {

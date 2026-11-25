@@ -6,9 +6,10 @@
 
 import { APP_CONFIG } from './config.js';
 import { playSfx } from './audio.js';
-import { BOOK_CATEGORIES, adminSaveSetting, normalizeActivityPhotos } from './data-service.js';
+import { BOOK_CATEGORIES, adminSaveSetting } from './data-service.js';
 import { openBookEditorModal } from './admin-book-modal.js';
-import { openLibrarianActivityModal } from './admin-activity-modal.js';
+import { openLibrarianActivityModal, renderActivitiesManagerCard } from './admin-activity-modal.js';
+import { openCeritaVideoEditorModal, renderCeritaAdminSection } from './admin-cerita-modal.js';
 import { openModel3dEditorModal } from './admin-catalog-modals.js';
 import { createIcon, escapeHtml, resolveGDriveLinks, showToast } from './ui-utils.js';
 
@@ -92,40 +93,6 @@ function getNextSortOrder(items = []) {
   return items.reduce((max, item) => Math.max(max, Number(item?.sort_order || 0)), 0) + 1;
 }
 
-function renderActivitiesManagerCard(activities = [], activitiesError = '') {
-  const rowsHtml = activities.length
-    ? activities
-      .map((act) => {
-        const photos = normalizeActivityPhotos(act.photos);
-        const thumbUrl = photos[0]?.url || 'assets/images/logo-smansi.webp';
-        const desc = String(act.description || '').trim();
-        const descNote = desc ? (desc.length > 65 ? `${desc.slice(0, 62)}...` : desc) : 'Tanpa deskripsi singkat';
-        const hiddenNote = act.is_active === false ? ' &middot; Disembunyikan' : '';
-        return `
-            <div class="doc-editor-row">
-              <div class="activity-editor-row-info">
-                <img class="activity-editor-thumb" src="${escapeHtml(thumbUrl)}" alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
-                <div><strong>${escapeHtml(act.title)}</strong><p>${photos.length} foto &middot; ${escapeHtml(descNote)}${hiddenNote}</p></div>
-              </div>
-              <button type="button" class="secondary-btn" data-edit-activity-id="${escapeHtml(act.id)}">Sunting</button>
-            </div>
-          `;
-      })
-      .join('')
-    : '<p class="admin-muted-note">Belum ada kegiatan Sudut Pustakawan. Klik + Tambah untuk membuat baru.</p>';
-
-  return `
-    <section class="sub-card">
-      <div class="sub-card-head">
-        <h3>Kegiatan Sudut Pustakawan (${activities.length})</h3>
-        <button type="button" class="primary-btn admin-row-btn" id="btn-admin-add-activity">+ Tambah</button>
-      </div>
-      ${activitiesError ? `<p class="file-status-text is-error">${escapeHtml(activitiesError)}</p>` : ''}
-      <div class="doc-editor-list">${rowsHtml}</div>
-    </section>
-  `;
-}
-
 export function renderCatalogManager(
   container,
   {
@@ -133,6 +100,7 @@ export function renderCatalogManager(
     catalogBooks = null,
     catalogModels3d = null,
     catalogActivities = null,
+    catalogCeritaVideos = null,
     activitiesError = '',
     subSection,
     onSelectSubSection,
@@ -144,19 +112,23 @@ export function renderCatalogManager(
   const activities = Array.isArray(catalogActivities)
     ? catalogActivities
     : snapshot?.librarianActivities || [];
+  const ceritaVideos = Array.isArray(catalogCeritaVideos)
+    ? catalogCeritaVideos
+    : snapshot?.ceritaGresikVideos || [];
   const settings = snapshot?.siteSettings || {};
   const contact = settings.contact_admin || {};
   const corner = settings.librarian_corner || {};
   const portalLinks = settings.portal_links || {};
   const kpi = settings.kpi_stats || {};
 
-  const section = ['books', 'models3d', 'settings'].includes(subSection) ? subSection : 'books';
+  const section = ['books', 'models3d', 'cerita', 'settings'].includes(subSection) ? subSection : 'books';
   const groupedBooks = groupBooksByCategory(books);
   const nextOrderByCategory = Object.fromEntries(
     BOOK_CATEGORIES.map((cat) => [cat, getNextSortOrder(groupedBooks.buckets[cat])])
   );
   const nextModelOrder = getNextSortOrder(models3d);
   const nextActivityOrder = getNextSortOrder(activities);
+  const nextCeritaOrder = getNextSortOrder(ceritaVideos);
 
   let bodyHtml = '';
   if (section === 'books') {
@@ -217,6 +189,8 @@ export function renderCatalogManager(
         .join('')}
       </div>
     `;
+  } else if (section === 'cerita') {
+    bodyHtml = renderCeritaAdminSection(ceritaVideos);
   } else {
     bodyHtml = `
       <div class="admin-settings-split">
@@ -255,6 +229,7 @@ export function renderCatalogManager(
     <div class="admin-catalog-pills" role="tablist" aria-label="Kategori katalog pengelola">
       <button type="button" class="filter-chip${section === 'books' ? ' is-active' : ''}" data-cat-sec="books">Katalog Buku (${books.length})</button>
       <button type="button" class="filter-chip${section === 'models3d' ? ' is-active' : ''}" data-cat-sec="models3d">Model 3D (${models3d.length})</button>
+      <button type="button" class="filter-chip${section === 'cerita' ? ' is-active' : ''}" data-cat-sec="cerita">Cerita Gresik (${ceritaVideos.length})</button>
       <button type="button" class="filter-chip${section === 'settings' ? ' is-active' : ''}" data-cat-sec="settings">WA Admin &amp; Pustakawan</button>
     </div>
     ${bodyHtml}
@@ -306,6 +281,12 @@ export function renderCatalogManager(
       return;
     }
 
+    if (target.closest('#btn-admin-add-cerita')) {
+      playSfx('pop');
+      openCeritaVideoEditorModal(null, onUpdated, { nextSortOrder: nextCeritaOrder });
+      return;
+    }
+
     const bookBtn = target.closest('[data-edit-book]');
     if (bookBtn instanceof HTMLElement) {
       const book = books.find((b) => String(b.id) === bookBtn.dataset.editBook);
@@ -336,6 +317,16 @@ export function renderCatalogManager(
       if (act) {
         playSfx('pop');
         openLibrarianActivityModal(act, onUpdated, { nextSortOrder: nextActivityOrder });
+      }
+      return;
+    }
+
+    const ceritaBtn = target.closest('[data-edit-cerita-id]');
+    if (ceritaBtn instanceof HTMLElement) {
+      const video = ceritaVideos.find((v) => String(v.id) === ceritaBtn.dataset.editCeritaId);
+      if (video) {
+        playSfx('pop');
+        openCeritaVideoEditorModal(video, onUpdated, { nextSortOrder: nextCeritaOrder });
       }
     }
   };

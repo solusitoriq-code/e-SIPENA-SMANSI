@@ -447,36 +447,6 @@ button {
   line-height: 1.2;
 }
 
-.kpi-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.kpi-chip {
-  min-width: 96px;
-  padding: 6px 11px;
-  border-radius: var(--radius-sm);
-  background: rgba(9, 17, 30, 0.42);
-  border: 1px solid rgba(253, 230, 138, 0.34);
-  text-align: center;
-}
-
-.kpi-chip strong {
-  display: block;
-  font-size: 19px;
-  font-weight: 800;
-  color: #fde68a;
-  line-height: 1.1;
-}
-
-.kpi-chip span {
-  font-size: 11px;
-  font-weight: 600;
-  color: #f8fafc;
-}
-
 .panel-badge {
   display: inline-flex;
   align-items: center;
@@ -732,7 +702,8 @@ button {
   opacity: 0.25;
 }
 
-.books-grid {
+.books-grid,
+.editorial-cards-grid {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
@@ -745,11 +716,13 @@ button {
   transition: transform 0.12s ease-out;
 }
 
-.books-grid.is-dragging {
+.books-grid.is-dragging,
+.editorial-cards-grid.is-dragging {
   cursor: grabbing;
 }
 
-.books-grid.is-eight-grid {
+.books-grid.is-eight-grid,
+.editorial-cards-grid.is-eight-grid {
   grid-auto-rows: auto;
 }
 
@@ -1073,20 +1046,17 @@ button {
   to { opacity: 1; transform: translateX(0); }
 }
 
-.books-grid.is-swipe-next {
+.books-grid.is-swipe-next,
+.editorial-cards-grid.is-swipe-next {
   animation: swipeNextIn 0.22s ease;
 }
 
-.books-grid.is-swipe-prev {
+.books-grid.is-swipe-prev,
+.editorial-cards-grid.is-swipe-prev {
   animation: swipePrevIn 0.22s ease;
 }
 
 /* Kartu Antologi Editorial (Cerpen & Puisi Tanpa Sampul & Penulis) */
-.editorial-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
 
 .editorial-book-card {
   display: flex;
@@ -1110,6 +1080,14 @@ button {
   transform: translateY(-2px);
   border-color: var(--royal-700);
   box-shadow: 0 12px 24px rgba(15, 41, 74, 0.13);
+}
+
+.editorial-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  cursor: pointer;
 }
 
 .editorial-card-meta {
@@ -2127,7 +2105,8 @@ button:disabled {
    ========================================================================== */
 
 .models3d-grid,
-.mading-cards-grid {
+.mading-cards-grid,
+.librarian-docs-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
@@ -2135,8 +2114,7 @@ button:disabled {
 
 .model3d-card,
 .mading-card,
-.librarian-doc-card,
-.librarian-info-card {
+.librarian-doc-card {
   display: flex;
   flex-direction: column;
   background: var(--surface-card);
@@ -2197,8 +2175,7 @@ button:disabled {
 
 .model3d-card-body,
 .mading-card,
-.librarian-doc-card,
-.librarian-info-card {
+.librarian-doc-card {
   padding: 12px;
 }
 
@@ -2326,6 +2303,26 @@ button:disabled {
   border-radius: 999px;
   background: linear-gradient(90deg, #f59e0b, #fde68a);
   transition: width 0.2s ease;
+}
+
+.model3d-controls-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#model3d-stage-controls-slot,
+#model3d-menu-controls-slot,
+.model3d-sheet-scroll {
+  display: contents;
+}
+
+.model3d-mobile-dock,
+.model3d-mobile-gesture-tip,
+.model3d-sheet-backdrop,
+.model3d-sheet-head,
+.model3d-mobile-fs-row {
+  display: none;
 }
 
 .model3d-controls {
@@ -2576,19 +2573,6 @@ button:disabled {
   font-size: 12px;
 }
 
-.librarian-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr);
-  gap: 12px;
-  align-items: start;
-}
-
-.librarian-docs-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
 .librarian-doc-card {
   gap: 8px;
 }
@@ -2744,42 +2728,247 @@ button:disabled {
   color: var(--text-main);
 }
 
-.librarian-info-card h3 {
-  margin: 0;
-  font-family: var(--font-literary);
-  font-size: 18px;
-  color: var(--navy-950);
+/* ==========================================================================
+   Menu Cerita Gresik (Daftar Video & Pemutar Modal)
+   ========================================================================== */
+
+.cerita-videos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
-.librarian-community {
-  margin: 3px 0 10px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--royal-700);
-}
-
-.librarian-dl {
-  margin: 0 0 12px;
+.cerita-video-card {
   display: flex;
   flex-direction: column;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.cerita-video-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, var(--navy-950) 0%, var(--royal-700) 100%);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.cerita-video-media img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.cerita-video-card:hover .cerita-video-media img {
+  transform: scale(1.03);
+}
+
+.cerita-video-poster-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(9, 17, 30, 0.14) 0%, rgba(9, 17, 30, 0.45) 100%);
+  pointer-events: none;
+}
+
+.cerita-video-play-ring {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(15, 41, 74, 0.9);
+  border: 2px solid rgba(253, 230, 138, 0.85);
+  color: #fde68a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(9, 17, 30, 0.45);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.cerita-video-card:hover .cerita-video-play-ring {
+  transform: scale(1.06);
+  background: var(--royal-700);
+}
+
+.cerita-video-platform-pill {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(9, 17, 30, 0.86);
+  color: #fde68a;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(253, 230, 138, 0.4);
+  pointer-events: none;
+}
+
+.cerita-video-body {
+  flex: 1 1 auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cerita-video-title {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--navy-950);
+  line-height: 1.3;
+}
+
+.cerita-video-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.48;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cerita-video-actions {
+  margin-top: auto;
+  padding-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cerita-video-actions > button,
+.cerita-video-actions > a {
+  flex: 1 1 auto;
+}
+
+.cerita-modal-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cerita-player-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 62dvh;
+  background: #09111e;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.cerita-player-stage iframe,
+.cerita-player-stage video {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #09111e;
+}
+
+.cerita-player-external-box {
+  padding: 24px 18px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #0f294a 0%, #1d4e89 100%);
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.cerita-player-external-box h3 {
+  margin: 0;
+  font-family: var(--font-literary);
+  font-size: 19px;
+  color: #ffffff;
+}
+
+.cerita-player-external-box p {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(248, 250, 252, 0.9);
+}
+
+.cerita-modal-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.librarian-dl dt {
-  font-size: 11.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-muted);
+.cerita-modal-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.librarian-dl dd {
-  margin: 1px 0 0;
-  font-size: 13px;
+.cerita-modal-desc {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+  border: 1px solid var(--border-subtle);
+  font-size: 14px;
+  line-height: 1.62;
   color: var(--text-main);
+  white-space: pre-line;
 }
 
-.librarian-wa-btn {
-  width: 100%;
+.admin-cerita-thumb {
+  width: 76px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--navy-900);
+  flex-shrink: 0;
+}
+
+.admin-cerita-thumb-icon {
+  width: 76px;
+  height: 48px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: linear-gradient(135deg, var(--navy-950), var(--royal-700));
+  color: #fde68a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-cerita-info {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.admin-cerita-url-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-field-foot small.is-error {
+  color: #b91c1c;
+  font-weight: 600;
 }
 
 .modal-header {
@@ -4124,11 +4313,6 @@ button:disabled {
     gap: 8px;
   }
 
-  .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .toolbar-row {
     gap: 8px;
   }
@@ -4137,7 +4321,8 @@ button:disabled {
     display: none;
   }
 
-  .books-grid {
+  .books-grid,
+  .editorial-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: auto;
     gap: 12px;
@@ -4153,9 +4338,10 @@ button:disabled {
   }
 
   .models3d-grid,
+  .cerita-videos-grid,
   .mading-cards-grid,
-  .catalog-admin-grid,
-  .editorial-cards-grid {
+  .librarian-docs-grid,
+  .catalog-admin-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -4170,7 +4356,6 @@ button:disabled {
     flex: 0 0 auto;
   }
 
-  .librarian-layout,
   .submission-layout,
   .admin-settings-split {
     grid-template-columns: 1fr;
@@ -4205,7 +4390,8 @@ button:disabled {
     padding: 0 10px;
   }
 
-  .books-grid {
+  .books-grid,
+  .editorial-cards-grid {
     gap: 10px;
   }
 
@@ -4223,9 +4409,10 @@ button:disabled {
   }
 
   .models3d-grid,
+  .cerita-videos-grid,
   .mading-cards-grid,
-  .catalog-admin-grid,
-  .editorial-cards-grid {
+  .librarian-docs-grid,
+  .catalog-admin-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -4300,25 +4487,6 @@ button:disabled {
     display: none;
   }
 
-  .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-  }
-
-  .kpi-chip {
-    min-width: 0;
-    padding: 4px 6px;
-  }
-
-  .kpi-chip strong {
-    font-size: 15px;
-  }
-
-  .kpi-chip span {
-    font-size: 10.5px;
-  }
-
   .toolbar-row,
   .antologi-global-bar,
   .antologi-novel-controls {
@@ -4343,7 +4511,9 @@ button:disabled {
     padding: 10px;
   }
 
-  .antologi-novel-controls .toolbar-right {
+  .antologi-novel-controls .toolbar-right,
+  .antologi-section-head > .toolbar-right {
+    width: 100%;
     justify-content: flex-end;
   }
 
@@ -4413,11 +4583,30 @@ button:disabled {
     padding: 0 8px;
   }
 
-  .books-grid {
+  .books-grid,
+  .editorial-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-auto-rows: auto;
     gap: 8px;
     padding: 1px;
+  }
+
+  .editorial-book-card {
+    padding: 9px;
+    gap: 6px;
+  }
+
+  .editorial-card-body {
+    gap: 6px;
+  }
+
+  .editorial-card-title {
+    font-size: 13.5px;
+    min-height: 2.5em;
+  }
+
+  .editorial-card-sub {
+    font-size: 11.5px;
   }
 
   .book-card {
@@ -4453,7 +4642,8 @@ button:disabled {
     font-size: 11.5px;
   }
 
-  .book-card-actions {
+  .book-card-actions,
+  .editorial-card-actions {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     gap: 5px;
@@ -4475,11 +4665,10 @@ button:disabled {
   }
 
   .models3d-grid,
+  .cerita-videos-grid,
   .mading-cards-grid,
   .librarian-docs-grid,
   .catalog-admin-grid,
-  .editorial-cards-grid,
-  .librarian-layout,
   .submission-layout,
   .admin-settings-split,
   .sub-form-grid,
@@ -4684,19 +4873,6 @@ button:disabled {
 
   .hero-subtitle {
     display: none;
-  }
-
-  .kpi-chip {
-    min-width: 64px;
-    padding: 3px 6px;
-  }
-
-  .kpi-chip strong {
-    font-size: 13.5px;
-  }
-
-  .kpi-chip span {
-    font-size: 10px;
   }
 
   .antologi-global-bar {
@@ -4970,7 +5146,6 @@ button:disabled {
     width: 130px;
   }
 
-  .librarian-layout,
   .submission-layout,
   .admin-settings-split,
   .sub-form-grid,
@@ -5009,11 +5184,382 @@ button:disabled {
   }
 
   .models3d-grid,
+  .cerita-videos-grid,
   .mading-cards-grid,
   .librarian-docs-grid,
   .catalog-admin-grid,
   .editorial-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .editorial-cards-grid {
+    gap: 7px;
+    padding: 1px;
+  }
+
+  .editorial-book-card {
+    padding: 8px 10px;
+    gap: 5px;
+  }
+
+  .editorial-card-body {
+    gap: 5px;
+  }
+
+  .editorial-card-title {
+    font-size: 13.5px;
+    min-height: 2.4em;
+  }
+}
+
+/* ==========================================================================
+   Penyesuaian Fullscreen Pameran 3D & AR pada HP (Portrait & Landscape, iPhone SE)
+   ========================================================================== */
+
+@media screen and (max-width: 599px), screen and (orientation: landscape) and (max-height: 500px) {
+  .app-modal.is-model3d-modal {
+    position: relative;
+    background: #09111e;
+  }
+
+  .app-modal.is-model3d-modal .modal-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 15;
+    flex-wrap: nowrap;
+    background: linear-gradient(180deg, rgba(9, 17, 30, 0.86) 0%, rgba(9, 17, 30, 0.42) 66%, rgba(9, 17, 30, 0) 100%);
+    border-bottom: 0;
+    padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 18px max(12px, env(safe-area-inset-left));
+    pointer-events: none;
+  }
+
+  .app-modal.is-model3d-modal .modal-title {
+    font-size: 14.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+  }
+
+  .app-modal.is-model3d-modal .modal-header-actions {
+    pointer-events: auto;
+  }
+
+  .app-modal.is-model3d-modal #modal-toggle-size,
+  .app-modal.is-model3d-modal #modal-browser-fs {
+    display: none;
+  }
+
+  .app-modal.is-model3d-modal #modal-close {
+    background: rgba(15, 41, 74, 0.82);
+    backdrop-filter: blur(8px);
+    border-color: rgba(255, 255, 255, 0.3);
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38);
+  }
+
+  .app-modal.is-model3d-modal .modal-body {
+    position: relative;
+    padding: 0 !important;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-modal.is-model3d-modal .model3d-modal-layout {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .app-modal.is-model3d-modal .model3d-stage-col {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    gap: 0;
+  }
+
+  .app-modal.is-model3d-modal .model3d-viewer-wrap {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+    border-radius: 0;
+    border: 0;
+  }
+
+  .app-modal.is-model3d-modal #model3d-stage-controls-slot {
+    display: none;
+  }
+
+  .app-modal.is-model3d-modal .model3d-mobile-gesture-tip {
+    display: inline-flex;
+    align-items: center;
+    position: absolute;
+    top: calc(50px + env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgba(9, 17, 30, 0.72);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #f8fafc;
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0.94;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .app-modal.is-model3d-modal .model3d-mobile-gesture-tip.is-hidden {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+
+  .app-modal.is-model3d-modal .model3d-mobile-dock {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: absolute;
+    left: max(12px, env(safe-area-inset-left));
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    z-index: 12;
+  }
+
+  .app-modal.is-model3d-modal .model3d-dock-btn {
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(15, 41, 74, 0.86);
+    backdrop-filter: blur(10px);
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.42);
+  }
+
+  .app-modal.is-model3d-modal .model3d-dock-icon-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(15, 41, 74, 0.86);
+    backdrop-filter: blur(10px);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.42);
+  }
+
+  .app-modal.is-model3d-modal .model3d-dock-icon-btn.is-playing {
+    border-color: var(--gold-400);
+    color: #fde68a;
+  }
+
+  .app-modal.is-model3d-modal .model3d-ar-btn {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    min-height: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    z-index: 12;
+  }
+
+  .app-modal.is-model3d-modal .model3d-load-overlay {
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 18;
+    background: rgba(9, 17, 30, 0.56);
+    backdrop-filter: blur(2px);
+  }
+
+  .app-modal.is-model3d-modal .model3d-info-col {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-height: 66dvh;
+    background: var(--surface-card);
+    border-top: 2px solid var(--gold-500);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -16px 40px rgba(0, 0, 0, 0.48);
+    overflow: hidden;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(104%);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.28s ease;
+  }
+
+  .app-modal.is-model3d-modal .model3d-modal-layout.is-mobile-menu-open .model3d-info-col {
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-head {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 14px 10px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: #f8fafc;
+    flex-shrink: 0;
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    margin: 0 auto;
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-kicker {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--navy-900);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-close-btn {
+    border-color: var(--border-subtle);
+    background: #ffffff;
+    color: var(--navy-900);
+    border-radius: 999px;
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 14px;
+  }
+
+  .app-modal.is-model3d-modal .model3d-info-title {
+    font-size: 18px;
+  }
+
+  .app-modal.is-model3d-modal #model3d-menu-controls-slot {
+    display: block;
+  }
+
+  .app-modal.is-model3d-modal #model3d-menu-controls-slot .model3d-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .app-modal.is-model3d-modal #model3d-menu-controls-slot .model3d-controls > button {
+    min-width: 0;
+    min-height: 42px;
+    font-size: 12.5px;
+    padding: 0 8px;
+  }
+
+  .app-modal.is-model3d-modal .model3d-intro-scroll {
+    flex: 0 0 auto;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .app-modal.is-model3d-modal .model3d-intro-paper {
+    font-size: 14.5px;
+    line-height: 1.65;
+  }
+
+  .app-modal.is-model3d-modal .model3d-mobile-fs-row {
+    display: flex;
+    padding-top: 2px;
+  }
+
+  .app-modal.is-model3d-modal .model3d-mobile-fs-row > button {
+    width: 100%;
+  }
+
+  .app-modal.is-model3d-modal .model3d-nav-footer {
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: #f8fafc;
+    flex-shrink: 0;
+  }
+
+  .app-modal.is-model3d-modal .model3d-nav-footer > button {
+    min-height: 42px;
+    padding: 0 12px;
+  }
+}
+
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .app-modal.is-model3d-modal .model3d-info-col {
+    top: 0;
+    left: auto;
+    right: 0;
+    bottom: 0;
+    width: min(350px, 60vw);
+    max-height: none;
+    height: 100%;
+    border-top: 0;
+    border-left: 2px solid var(--gold-500);
+    border-radius: 18px 0 0 18px;
+    box-shadow: -16px 0 40px rgba(0, 0, 0, 0.48);
+    transform: translateX(104%);
+  }
+
+  .app-modal.is-model3d-modal .model3d-modal-layout.is-mobile-menu-open .model3d-info-col {
+    transform: translateX(0);
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-handle {
+    display: none;
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-head {
+    padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px 14px;
+  }
+
+  .app-modal.is-model3d-modal .model3d-sheet-scroll {
+    padding: 10px max(12px, env(safe-area-inset-right)) 10px 14px;
+  }
+
+  .app-modal.is-model3d-modal .model3d-nav-footer {
+    padding: 8px max(12px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) 14px;
   }
 }
 

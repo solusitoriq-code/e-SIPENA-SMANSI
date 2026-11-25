@@ -16,6 +16,46 @@ import { closeModal, createIcon, escapeHtml, openModal, setModalBusy, showToast 
 const FALLBACK_PHOTO = 'assets/images/logo-smansi.webp';
 const MAX_INPUT_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Merender kartu daftar Kegiatan Sudut Pustakawan di Ruang Pengelola.
+ * @param {any[]} activities
+ * @param {string} activitiesError
+ * @returns {string}
+ */
+export function renderActivitiesManagerCard(activities = [], activitiesError = '') {
+  const rowsHtml = activities.length
+    ? activities
+      .map((act) => {
+        const photos = normalizeActivityPhotos(act.photos);
+        const thumbUrl = photos[0]?.url || FALLBACK_PHOTO;
+        const desc = String(act.description || '').trim();
+        const descNote = desc ? (desc.length > 65 ? `${desc.slice(0, 62)}...` : desc) : 'Tanpa deskripsi singkat';
+        const hiddenNote = act.is_active === false ? ' &middot; Disembunyikan' : '';
+        return `
+            <div class="doc-editor-row">
+              <div class="activity-editor-row-info">
+                <img class="activity-editor-thumb" src="${escapeHtml(thumbUrl)}" alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='${FALLBACK_PHOTO}'">
+                <div><strong>${escapeHtml(act.title)}</strong><p>${photos.length} foto &middot; ${escapeHtml(descNote)}${hiddenNote}</p></div>
+              </div>
+              <button type="button" class="secondary-btn" data-edit-activity-id="${escapeHtml(act.id)}">Sunting</button>
+            </div>
+          `;
+      })
+      .join('')
+    : '<p class="admin-muted-note">Belum ada kegiatan Sudut Pustakawan. Klik + Tambah untuk membuat baru.</p>';
+
+  return `
+    <section class="sub-card">
+      <div class="sub-card-head">
+        <h3>Kegiatan Sudut Pustakawan (${activities.length})</h3>
+        <button type="button" class="primary-btn admin-row-btn" id="btn-admin-add-activity">+ Tambah</button>
+      </div>
+      ${activitiesError ? `<p class="file-status-text is-error">${escapeHtml(activitiesError)}</p>` : ''}
+      <div class="doc-editor-list">${rowsHtml}</div>
+    </section>
+  `;
+}
+
 function isValidImageFile(file) {
   if (!file || typeof file.name !== 'string') return false;
   const okType = /^image\/(webp|png|jpeg|jpg)$/i.test(String(file.type || ''));

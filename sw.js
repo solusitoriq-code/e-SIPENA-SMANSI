@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'esipena-shell-v22';
+const SHELL_CACHE = 'esipena-shell-v29';
 const RUNTIME_CACHE = 'esipena-runtime-v16';
 const PDFJS_ORIGIN = 'https://cdn.jsdelivr.net';
 const PDFJS_PATH_PREFIX = '/npm/pdfjs-dist@4.8.69/';
@@ -22,6 +22,7 @@ const APP_SHELL_ASSETS = [
   './js/admin-book-modal.js',
   './js/admin-catalog-modals.js',
   './js/admin-catalog-views.js',
+  './js/admin-cerita-modal.js',
   './js/admin-curation-modal.js',
   './js/admin-service.js',
   './js/admin-views.js',
@@ -30,6 +31,8 @@ const APP_SHELL_ASSETS = [
   './js/barcode-scanner.js',
   './js/book-modal.js',
   './js/book-reader-ui.js',
+  './js/cerita-gresik-service.js',
+  './js/cerita-gresik-views.js',
   './js/community-views.js',
   './js/config.js',
   './js/data-service.js',
@@ -37,6 +40,7 @@ const APP_SHELL_ASSETS = [
   './js/media-upload.js',
   './js/modal-helper.js',
   './js/model-3d-modal.js',
+  './js/model-3d-sheet.js',
   './js/nav-controls.js',
   './js/pdf-cache.js',
   './js/pdf-slide-viewer.js',

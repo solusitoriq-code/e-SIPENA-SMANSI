@@ -1,6 +1,7 @@
 /**
  * Modal Penampil Model 3D, AR & Narasi Audio (Pameran 3D Gresik) — e-SIPENA SMAN 1 Sidayu
- * Memuat @google/model-viewer secara on-demand, mendukung orbit 3D, mode AR perangkat,
+ * Memuat @google/model-viewer secara on-demand, mendukung orbit 3D 360°, mode AR perangkat,
+ * tampilan penuh adaptif HP (termasuk iPhone SE) dengan menu tersembunyi ramah pengguna,
  * kontrol D-Pad TV Android, dan memutar otomatis audio lokal dari assets/audios.
  */
 
@@ -14,10 +15,10 @@ import {
   stopAudioTrack,
   stopSpeech
 } from './audio.js';
-import { createIcon, escapeHtml, openModal, renderFormattedLiteraryHtml, showToast } from './ui-utils.js';
+import { MOBILE_3D_MQ, bindModel3dResponsiveUi, buildModel3dModalHtml } from './model-3d-sheet.js';
+import { createIcon, openModal, showToast } from './ui-utils.js';
 
 const MODEL_VIEWER_CDN = 'https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js';
-const FALLBACK_POSTER = 'assets/images/logo-smansi.webp';
 const DEFAULT_AUDIO_BY_MODEL = {
   'assets/3d_models/damar-kurung-3d.glb': 'assets/audios/damar-kurung-audio.mpeg',
   'assets/3d_models/jubung-3d.glb': 'assets/audios/jubung-audio.mpeg',
@@ -61,7 +62,7 @@ function formatAudioClock(sec) {
 }
 
 /**
- * Membuka modal Split-View Pameran 3D & AR untuk satu koleksi budaya Gresik.
+ * Membuka modal Pameran 3D & AR untuk satu koleksi budaya Gresik.
  * @param {Record<string, any>} model
  * @param {Record<string, any>[]} [allModels]
  */
@@ -72,11 +73,12 @@ export function openModel3dModal(model, allModels = []) {
   const activeModel = list[currentIdx] || model;
   const hasPrev = list.length > 1 && currentIdx > 0;
   const hasNext = list.length > 1 && currentIdx < list.length - 1;
-  const posterUrl = escapeHtml(activeModel.placeholder_url || FALLBACK_POSTER);
-  const modelSrc = escapeHtml(activeModel.model_path || '');
+  const mql = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(MOBILE_3D_MQ) : null;
+  const isMobileNow = Boolean(mql?.matches);
 
   stopSpeech();
 
+  let cleanupResponsive = null;
   const bodyEl = openModal({
     title: activeModel.title || 'Pameran 3D Gresik',
     wide: true,
@@ -84,94 +86,22 @@ export function openModel3dModal(model, allModels = []) {
     allowFullscreen: true,
     onClose: () => {
       stopSpeech();
+      document.getElementById('app-modal')?.classList.remove('is-model3d-modal');
+      cleanupResponsive?.();
+      cleanupResponsive = null;
     },
-    html: `
-      <div class="model3d-modal-layout">
-        <div class="model3d-stage-col">
-          <div class="model3d-viewer-wrap">
-            <model-viewer
-              id="active-model-viewer"
-              src="${modelSrc}"
-              poster="${posterUrl}"
-              alt="Model 3D ${escapeHtml(activeModel.title || 'Budaya Gresik')}"
-              camera-controls
-              touch-action="pan-y"
-              auto-rotate
-              auto-rotate-delay="1200"
-              shadow-intensity="1"
-              exposure="1.05"
-              interaction-prompt="none"
-              ar
-              ar-modes="webxr scene-viewer quick-look"
-              ar-scale="auto"
-              loading="eager"
-              reveal="auto"
-            >
-              <button type="button" slot="ar-button" class="primary-btn inline-action-btn model3d-ar-btn">
-                ${createIcon('cube')}
-                <span>Tampilkan di AR</span>
-              </button>
-            </model-viewer>
-            <div id="model3d-load-overlay" class="model3d-load-overlay" aria-live="polite">
-              <div class="model3d-load-card">
-                <strong id="model3d-load-label">Menyiapkan objek 3D...</strong>
-                <div class="model3d-progress-track">
-                  <div id="model3d-progress-fill" class="model3d-progress-fill"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="model3d-controls" role="toolbar" aria-label="Kontrol sudut objek 3D">
-            <button type="button" class="secondary-btn inline-action-btn" id="btn-m3d-rot-left" aria-label="Putar objek ke kiri">
-              ${createIcon('rotateLeft')}<span>Putar Kiri</span>
-            </button>
-            <button type="button" class="secondary-btn inline-action-btn" id="btn-m3d-rot-right" aria-label="Putar objek ke kanan">
-              ${createIcon('rotateRight')}<span>Putar Kanan</span>
-            </button>
-            <button type="button" class="secondary-btn inline-action-btn is-active" id="btn-m3d-autorotate" aria-pressed="true">
-              ${createIcon('play')}<span>Putar Otomatis</span>
-            </button>
-            <button type="button" class="secondary-btn inline-action-btn" id="btn-m3d-reset">
-              ${createIcon('reset')}<span>Reset Sudut</span>
-            </button>
-          </div>
-          <p class="model3d-hint">Seret objek untuk memutar, cubit atau gulir untuk memperbesar, atau gunakan tombol kontrol.</p>
-        </div>
-
-        <aside class="model3d-info-col">
-          <div class="model3d-info-badges">
-            <span class="panel-badge">${escapeHtml(activeModel.category || 'Budaya Gresik')}</span>
-            <span class="status-tag is-lolos">Koleksi 3D &amp; AR</span>
-          </div>
-          <h3 class="model3d-info-title">${escapeHtml(activeModel.title || '')}</h3>
-
-          <div class="model3d-tts-bar">
-            <button type="button" class="primary-btn inline-action-btn" id="btn-model-tts" data-autofocus>
-              ${createIcon('volume')}<span>Dengar Perkenalan</span>
-            </button>
-            <span id="model3d-tts-status" class="model3d-tts-status" hidden>Sedang membacakan perkenalan...</span>
-          </div>
-
-          <div class="model3d-intro-scroll">
-            <article class="literary-reader-paper model3d-intro-paper">
-              ${renderFormattedLiteraryHtml(activeModel.introduction || '', 'Teks perkenalan model belum tersedia.')}
-            </article>
-          </div>
-
-          ${list.length > 1
-      ? `<div class="model3d-nav-footer">
-                  <button type="button" class="secondary-btn" id="btn-m3d-prev" ${hasPrev ? '' : 'disabled'}>&lsaquo; Sebelumnya</button>
-                  <span class="page-indicator">Koleksi ${currentIdx + 1} / ${list.length}</span>
-                  <button type="button" class="secondary-btn" id="btn-m3d-next" ${hasNext ? '' : 'disabled'}>Berikutnya &rsaquo;</button>
-                </div>`
-      : ''}
-        </aside>
-      </div>
-    `
+    html: buildModel3dModalHtml({
+      activeModel,
+      currentIdx,
+      totalCount: list.length,
+      isMobileNow
+    })
   });
 
   if (!bodyEl) return;
+
+  document.getElementById('app-modal')?.classList.add('is-model3d-modal');
+  cleanupResponsive = bindModel3dResponsiveUi(bodyEl, mql);
 
   const viewer = bodyEl.querySelector('#active-model-viewer');
   const overlay = bodyEl.querySelector('#model3d-load-overlay');
@@ -213,8 +143,11 @@ export function openModel3dModal(model, allModels = []) {
       autoBtn.classList.remove('is-active');
       autoBtn.setAttribute('aria-pressed', 'false');
     }
-    azimuthDeg += deltaDeg;
-    viewer.setAttribute('camera-orbit', `${azimuthDeg}deg 75deg auto`);
+    const orbit = typeof viewer.getCameraOrbit === 'function' ? viewer.getCameraOrbit() : null;
+    const curThetaDeg = orbit && Number.isFinite(orbit.theta) ? (orbit.theta * 180) / Math.PI : azimuthDeg;
+    const curPhiDeg = orbit && Number.isFinite(orbit.phi) ? (orbit.phi * 180) / Math.PI : 75;
+    azimuthDeg = curThetaDeg + deltaDeg;
+    viewer.setAttribute('camera-orbit', `${azimuthDeg.toFixed(1)}deg ${curPhiDeg.toFixed(1)}deg auto`);
   };
 
   bodyEl.querySelector('#btn-m3d-rot-left')?.addEventListener('click', () => { playSfx('click'); applyOrbitDelta(-35); });
@@ -239,12 +172,19 @@ export function openModel3dModal(model, allModels = []) {
   });
 
   const ttsBtn = bodyEl.querySelector('#btn-model-tts');
+  const quickAudioBtn = bodyEl.querySelector('#btn-m3d-quick-audio');
   const ttsStatus = bodyEl.querySelector('#model3d-tts-status');
   const audioSrc = resolveModelAudioPath(activeModel);
 
   const setAudioUi = (playing, timeLabel = '') => {
     if (ttsBtn) {
       ttsBtn.innerHTML = `${createIcon(playing ? 'mute' : 'volume')}<span>${playing ? 'Hentikan Audio' : 'Putar Audio'}</span>`;
+    }
+    if (quickAudioBtn) {
+      quickAudioBtn.innerHTML = createIcon(playing ? 'volume' : 'mute');
+      quickAudioBtn.classList.toggle('is-playing', playing);
+      quickAudioBtn.setAttribute('aria-pressed', playing ? 'true' : 'false');
+      quickAudioBtn.setAttribute('aria-label', playing ? 'Hentikan audio perkenalan' : 'Putar audio perkenalan');
     }
     if (ttsStatus instanceof HTMLElement) {
       ttsStatus.hidden = !playing;
@@ -287,7 +227,7 @@ export function openModel3dModal(model, allModels = []) {
     if (!started && ttsBtn?.isConnected) setAudioUi(false);
   };
 
-  ttsBtn?.addEventListener('click', () => {
+  const toggleIntroAudio = () => {
     if (isAudioTrackPlaying() || isSpeaking()) {
       stopSpeech();
       stopAudioTrack();
@@ -295,7 +235,10 @@ export function openModel3dModal(model, allModels = []) {
       return;
     }
     startIntroAudio({ notifyOnError: true });
-  });
+  };
+
+  ttsBtn?.addEventListener('click', toggleIntroAudio);
+  quickAudioBtn?.addEventListener('click', () => { playSfx('click'); toggleIntroAudio(); });
 
   startIntroAudio({ notifyOnError: false });
 

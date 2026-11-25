@@ -16,6 +16,7 @@ import {
 } from './ui-utils.js';
 
 export { openBookModal } from './book-modal.js';
+export { renderCeritaGresikPanel } from './cerita-gresik-views.js';
 export { renderLibrarianPanel, renderMadingPanel, renderModels3dPanel } from './community-views.js';
 
 export function partitionAntologiBooks(books = []) {
@@ -30,23 +31,13 @@ export function partitionAntologiBooks(books = []) {
 }
 
 /**
- * Memperbarui angka KPI pada Hero Banner dan jumlah buku per tombol filter peran Novel.
- * @param {{ books?: any[], models3d?: any[], siteSettings?: Record<string, any> }} snapshot
+ * Memperbarui jumlah buku per tombol filter peran Novel.
+ * @param {{ books?: any[] }} snapshot
  */
 export function updateHeroKpis(snapshot = {}) {
   const books = Array.isArray(snapshot.books) ? snapshot.books : [];
-  const models3d = Array.isArray(snapshot.models3d) ? snapshot.models3d : [];
-  const kpi = snapshot.siteSettings?.kpi_stats || {};
   const buckets = partitionAntologiBooks(books);
   const novelBooks = buckets.Novel;
-
-  const novelsEl = document.getElementById('kpi-novels-2026');
-  const books2025El = document.getElementById('kpi-books-2025');
-  const models3dEl = document.getElementById('kpi-models-3d');
-
-  if (novelsEl) novelsEl.textContent = String(books.length);
-  if (books2025El) books2025El.textContent = String(kpi.books_2025_count ?? 23);
-  if (models3dEl) models3dEl.textContent = String(models3d.length);
 
   const countRole = (role) =>
     novelBooks.filter((b) => String(b.author_role || '').toLowerCase() === role.toLowerCase()).length;
@@ -127,50 +118,125 @@ function bindBookCardActions(containerEl, books, { onOpenBook, onQuickLike }) {
   };
 }
 
-/**
- * Merender grid 4 kolom etalase buku berpaginasi di #books-grid.
- * @param {{
- *   gridEl: HTMLElement | null,
- *   pageInfoEl: HTMLElement | null,
- *   prevBtn: HTMLButtonElement | null,
- *   nextBtn: HTMLButtonElement | null,
- *   books: any[],
- *   roleFilter: string,
- *   searchQuery: string,
- *   page: number,
- *   pageSize: number,
- *   onOpenBook: (book: any, mode: 'detail' | 'read') => void,
- *   onQuickLike: (book: any) => Promise<void>,
- *   onResetFilter: () => void
- * }} opts
- * @returns {{ page: number, totalPages: number, totalItems: number }}
- */
-export function renderBooksShelf(opts) {
+function renderNovelCardHtml(book) {
+  const liked = hasLikedBook(book.id);
+  const safeId = escapeHtml(book.id);
+  const safeTitle = escapeHtml(book.title);
+  const safeAuthor = escapeHtml(book.author_name);
+  const safeClass = escapeHtml(book.author_class || book.publication_year || '');
+  const likesCount = Number(book.likes_count || 0);
+
+  return `
+    <article class="book-card" data-book-id="${safeId}" data-nav-card="true">
+      <div class="book-cover-stage" data-action="open-detail" data-book-id="${safeId}">
+        <div class="book-cover-3d">
+          <img src="${escapeHtml(book.cover_url || 'assets/images/logo-smansi.webp')}" alt="Sampul novel ${safeTitle}" draggable="false" loading="lazy" decoding="async" width="296" height="420" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
+        </div>
+        <span class="book-year-tag">${escapeHtml(book.publication_year || 2026)}</span>
+      </div>
+      <div class="book-card-body">
+        <div class="book-meta-row">
+          <span class="${getRoleBadgeClass(book.author_role)}">${escapeHtml(book.author_role)}</span>
+          ${safeClass ? `<span class="book-class-tag">${safeClass}</span>` : ''}
+        </div>
+        <h3 class="book-card-title" title="${safeTitle}">${safeTitle}</h3>
+        <p class="book-card-author" title="${safeAuthor}">${safeAuthor}</p>
+        <div class="book-card-actions">
+          <button type="button" class="like-pill-btn${liked ? ' is-liked' : ''}" data-action="quick-like" data-book-id="${safeId}" aria-pressed="${liked ? 'true' : 'false'}" aria-label="Sukai buku ${safeTitle}, saat ini ${likesCount} suka">
+            ${createIcon('heart')}<span class="like-count-value">${likesCount}</span>
+          </button>
+          <button type="button" class="secondary-btn card-btn" data-action="open-detail" data-book-id="${safeId}">Detail</button>
+          <button type="button" class="primary-btn card-btn" data-action="open-read" data-book-id="${safeId}">Baca</button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderEditorialCardHtml(book, category) {
+  const liked = hasLikedBook(book.id);
+  const safeId = escapeHtml(book.id);
+  const safeTitle = escapeHtml(book.title);
+  const likesCount = Number(book.likes_count || 0);
+  const gdrive = resolveGDriveLinks(book);
+
+  return `
+    <article class="editorial-book-card" data-book-id="${safeId}" data-nav-card="true">
+      <div class="editorial-card-body" data-action="open-read" data-book-id="${safeId}">
+        <div class="editorial-card-meta">
+          <span class="editorial-cat-pill">${escapeHtml(category)}</span>
+          <span class="editorial-year-pill">${escapeHtml(book.publication_year || 2026)}</span>
+          ${gdrive.hasDriveFile ? '<span class="editorial-pdf-pill">PDF Siap</span>' : ''}
+        </div>
+        <h3 class="editorial-card-title" title="${safeTitle}">${safeTitle}</h3>
+        <p class="editorial-card-sub">Antologi ${escapeHtml(category)} SMAN 1 Sidayu</p>
+      </div>
+      <div class="editorial-card-actions">
+        <button type="button" class="like-pill-btn${liked ? ' is-liked' : ''}" data-action="quick-like" data-book-id="${safeId}" aria-pressed="${liked ? 'true' : 'false'}" aria-label="Sukai ${escapeHtml(category)} ${safeTitle}, saat ini ${likesCount} suka">
+          ${createIcon('heart')}<span class="like-count-value">${likesCount}</span>
+        </button>
+        <button type="button" class="primary-btn card-btn" data-action="open-read" data-book-id="${safeId}">Baca</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderShelfSection(opts) {
   const {
-    gridEl, pageInfoEl, prevBtn, nextBtn, shelfPrevBtn, shelfNextBtn, swipeCueEl,
-    books = [], roleFilter = 'all', searchQuery = '', page = 1, pageSize = 4,
-    onOpenBook, onQuickLike, onResetFilter, onSelectPage
+    sectionEl,
+    books = [],
+    category = 'Novel',
+    roleFilter = 'all',
+    searchQuery = '',
+    page = 1,
+    pageSize = 4,
+    onOpenBook,
+    onQuickLike,
+    onResetFilter,
+    onSelectPage
   } = opts;
 
-  const filtered = filterBooksList(books, roleFilter, searchQuery);
+  const isNovel = category === 'Novel';
+  const filtered = filterBooksList(books, isNovel ? roleFilter : 'all', searchQuery);
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const slice = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  if (pageInfoEl) pageInfoEl.textContent = `Hal ${safePage} / ${totalPages}`;
-  if (prevBtn) prevBtn.disabled = safePage <= 1;
-  if (nextBtn) nextBtn.disabled = safePage >= totalPages;
-  if (shelfPrevBtn) {
-    shelfPrevBtn.disabled = safePage <= 1;
-    shelfPrevBtn.hidden = totalPages <= 1;
+  const q = (sel) => sectionEl?.querySelector(sel) || null;
+  const countEl = q('[data-shelf-count]');
+  const toolbarEl = q('[data-shelf-toolbar]');
+  const pageSizeBtn = q('[data-shelf-pagesize]');
+  const pageInfoEl = q('[data-shelf-page-info]');
+  const prevBtn = q('[data-shelf-prev]');
+  const nextBtn = q('[data-shelf-next]');
+  const shelfPrevBtn = q('[data-shelf-edge-prev]');
+  const shelfNextBtn = q('[data-shelf-edge-next]');
+  const swipeCueEl = q('[data-shelf-swipe-cue]');
+  const gridEl = q('[data-shelf-grid]');
+
+  const showToolbar = filtered.length > 4;
+  const showPager = totalPages > 1;
+
+  if (countEl) countEl.textContent = `${filtered.length} Karya`;
+  if (toolbarEl instanceof HTMLElement) toolbarEl.hidden = !showToolbar;
+  if (pageSizeBtn) {
+    pageSizeBtn.textContent = `${pageSize} / Hal`;
+    pageSizeBtn.setAttribute('aria-pressed', pageSize >= 8 ? 'true' : 'false');
   }
-  if (shelfNextBtn) {
+  if (pageInfoEl) pageInfoEl.textContent = `Hal ${safePage} / ${totalPages}`;
+  if (prevBtn instanceof HTMLButtonElement) prevBtn.disabled = safePage <= 1;
+  if (nextBtn instanceof HTMLButtonElement) nextBtn.disabled = safePage >= totalPages;
+  if (shelfPrevBtn instanceof HTMLButtonElement) {
+    shelfPrevBtn.disabled = safePage <= 1;
+    shelfPrevBtn.hidden = !showPager;
+  }
+  if (shelfNextBtn instanceof HTMLButtonElement) {
     shelfNextBtn.disabled = safePage >= totalPages;
-    shelfNextBtn.hidden = totalPages <= 1;
+    shelfNextBtn.hidden = !showPager;
   }
 
-  if (swipeCueEl) {
-    if (totalPages > 1) {
+  if (swipeCueEl instanceof HTMLElement) {
+    if (showPager) {
       swipeCueEl.hidden = false;
       swipeCueEl.innerHTML = renderSwipeCueHtml(safePage, totalPages, 'Geser atau klik panah');
       swipeCueEl.onclick = (event) => {
@@ -190,20 +256,33 @@ export function renderBooksShelf(opts) {
   }
 
   if (!gridEl) return { page: safePage, totalPages, totalItems: filtered.length };
-
   gridEl.classList.toggle('is-eight-grid', pageSize >= 8 && slice.length > 4);
 
   if (!slice.length) {
-    gridEl.innerHTML = `
-      <article class="empty-stage-note">
-        <h2>Buku Tidak Ditemukan</h2>
-        <p>Tidak ada novel yang cocok dengan pencarian atau filter peran saat ini.</p>
-        <div style="margin-top: 10px;">
-          <button type="button" class="primary-btn" id="btn-reset-book-filter">Tampilkan Semua Novel</button>
-        </div>
-      </article>
-    `;
-    gridEl.querySelector('#btn-reset-book-filter')?.addEventListener('click', () => {
+    const hasFilter = Boolean(String(searchQuery || '').trim()) || (isNovel && roleFilter !== 'all');
+    if (isNovel) {
+      gridEl.innerHTML = `
+        <article class="empty-stage-note">
+          <h2>Buku Tidak Ditemukan</h2>
+          <p>Tidak ada novel yang cocok dengan pencarian atau filter peran saat ini.</p>
+          <div style="margin-top: 10px;">
+            <button type="button" class="primary-btn" data-reset-shelf="1">Tampilkan Semua Novel</button>
+          </div>
+        </article>
+      `;
+    } else {
+      gridEl.innerHTML = `
+        <article class="editorial-empty-card">
+          <p>${
+            hasFilter
+              ? `Tidak ada karya ${escapeHtml(category)} yang cocok dengan pencarian saat ini.`
+              : `Belum ada koleksi ${escapeHtml(category)} yang dipublikasikan.`
+          }</p>
+          ${hasFilter ? '<button type="button" class="secondary-btn" data-reset-shelf="1">Tampilkan Semua</button>' : ''}
+        </article>
+      `;
+    }
+    gridEl.querySelector('[data-reset-shelf]')?.addEventListener('click', () => {
       playSfx('click');
       onResetFilter?.();
     });
@@ -211,110 +290,11 @@ export function renderBooksShelf(opts) {
   }
 
   gridEl.innerHTML = slice
-    .map((book) => {
-      const liked = hasLikedBook(book.id);
-      const safeId = escapeHtml(book.id);
-      const safeTitle = escapeHtml(book.title);
-      const safeAuthor = escapeHtml(book.author_name);
-      const safeClass = escapeHtml(book.author_class || book.publication_year || '');
-      const likesCount = Number(book.likes_count || 0);
-
-      return `
-        <article class="book-card" data-book-id="${safeId}" data-nav-card="true">
-          <div class="book-cover-stage" data-action="open-detail" data-book-id="${safeId}">
-            <div class="book-cover-3d">
-              <img src="${escapeHtml(book.cover_url || 'assets/images/logo-smansi.webp')}" alt="Sampul novel ${safeTitle}" draggable="false" loading="lazy" decoding="async" width="296" height="420" onerror="this.onerror=null;this.src='assets/images/logo-smansi.webp'">
-            </div>
-            <span class="book-year-tag">${escapeHtml(book.publication_year || 2026)}</span>
-          </div>
-          <div class="book-card-body">
-            <div class="book-meta-row">
-              <span class="${getRoleBadgeClass(book.author_role)}">${escapeHtml(book.author_role)}</span>
-              ${safeClass ? `<span class="book-class-tag">${safeClass}</span>` : ''}
-            </div>
-            <h3 class="book-card-title" title="${safeTitle}">${safeTitle}</h3>
-            <p class="book-card-author" title="${safeAuthor}">${safeAuthor}</p>
-            <div class="book-card-actions">
-              <button type="button" class="like-pill-btn${liked ? ' is-liked' : ''}" data-action="quick-like" data-book-id="${safeId}" aria-pressed="${liked ? 'true' : 'false'}" aria-label="Sukai buku ${safeTitle}, saat ini ${likesCount} suka">
-                ${createIcon('heart')}<span class="like-count-value">${likesCount}</span>
-              </button>
-              <button type="button" class="secondary-btn card-btn" data-action="open-detail" data-book-id="${safeId}">Detail</button>
-              <button type="button" class="primary-btn card-btn" data-action="open-read" data-book-id="${safeId}">Baca</button>
-            </div>
-          </div>
-        </article>
-      `;
-    })
+    .map((book) => (isNovel ? renderNovelCardHtml(book) : renderEditorialCardHtml(book, category)))
     .join('');
 
   bindBookCardActions(gridEl, books, { onOpenBook, onQuickLike });
-
   return { page: safePage, totalPages, totalItems: filtered.length };
-}
-
-function renderEditorialCategoryGrid({
-  gridEl,
-  countBadgeEl,
-  books = [],
-  category,
-  searchQuery = '',
-  onOpenBook,
-  onQuickLike,
-  onResetFilter
-}) {
-  const filtered = filterBooksList(books, 'all', searchQuery);
-  if (countBadgeEl) countBadgeEl.textContent = `${filtered.length} Karya`;
-  if (!gridEl) return { totalItems: filtered.length };
-
-  if (!filtered.length) {
-    const hasSearch = Boolean(String(searchQuery || '').trim());
-    gridEl.innerHTML = `
-      <article class="editorial-empty-card">
-        <p>${
-          hasSearch
-            ? `Tidak ada karya ${escapeHtml(category)} yang cocok dengan pencarian saat ini.`
-            : `Belum ada koleksi ${escapeHtml(category)} yang dipublikasikan.`
-        }</p>
-        ${hasSearch ? `<button type="button" class="secondary-btn" data-reset-editorial="1">Tampilkan Semua</button>` : ''}
-      </article>
-    `;
-    gridEl.querySelector('[data-reset-editorial]')?.addEventListener('click', () => {
-      playSfx('click');
-      onResetFilter?.();
-    });
-    return { totalItems: 0 };
-  }
-
-  gridEl.innerHTML = filtered
-    .map((book) => {
-      const liked = hasLikedBook(book.id);
-      const safeId = escapeHtml(book.id);
-      const safeTitle = escapeHtml(book.title);
-      const likesCount = Number(book.likes_count || 0);
-      const gdrive = resolveGDriveLinks(book);
-      return `
-        <article class="editorial-book-card" data-book-id="${safeId}" data-nav-card="true">
-          <div class="editorial-card-meta">
-            <span class="editorial-cat-pill">${escapeHtml(category)}</span>
-            <span class="editorial-year-pill">${escapeHtml(book.publication_year || 2026)}</span>
-            ${gdrive.hasDriveFile ? '<span class="editorial-pdf-pill">PDF Siap</span>' : ''}
-          </div>
-          <h3 class="editorial-card-title" title="${safeTitle}">${safeTitle}</h3>
-          <p class="editorial-card-sub">Antologi ${escapeHtml(category)} SMAN 1 Sidayu</p>
-          <div class="editorial-card-actions">
-            <button type="button" class="like-pill-btn${liked ? ' is-liked' : ''}" data-action="quick-like" data-book-id="${safeId}" aria-pressed="${liked ? 'true' : 'false'}" aria-label="Sukai ${escapeHtml(category)} ${safeTitle}, saat ini ${likesCount} suka">
-              ${createIcon('heart')}<span class="like-count-value">${likesCount}</span>
-            </button>
-            <button type="button" class="secondary-btn card-btn" data-action="open-detail" data-book-id="${safeId}">Detail</button>
-            <button type="button" class="primary-btn card-btn" data-action="open-read" data-book-id="${safeId}">Baca</button>
-          </div>
-        </article>
-      `;
-    })
-    .join('');
-
-  bindBookCardActions(gridEl, books, { onOpenBook, onQuickLike });
-  return { totalItems: filtered.length };
 }
 
 function bindJumpBar(jumpBarEl) {
@@ -335,59 +315,52 @@ function bindJumpBar(jumpBarEl) {
 }
 
 /**
- * Merender ketiga section Etalase Antologi: Novel, Cerpen, dan Puisi.
+ * Merender ketiga section Etalase Antologi (Novel, Cerpen, Puisi) dengan paginasi & swipe seragam.
  */
-export function renderAntologiSections(opts) {
-  const {
-    books = [],
-    searchQuery = '',
-    jumpBarEl,
-    novelCountEl,
-    cerpenGridEl,
-    cerpenCountEl,
-    puisiGridEl,
-    puisiCountEl
-  } = opts;
+export function renderAntologiSections({
+  books = [],
+  roleFilter = 'all',
+  searchQuery = '',
+  shelfState = {},
+  jumpBarEl,
+  onSelectPage,
+  onOpenBook,
+  onQuickLike,
+  onResetFilter
+}) {
   const buckets = partitionAntologiBooks(books);
+  const sections = [
+    ['novel', 'Novel'],
+    ['cerpen', 'Cerpen'],
+    ['puisi', 'Puisi']
+  ];
 
-  const novelRes = renderBooksShelf({ ...opts, books: buckets.Novel });
-  if (novelCountEl) novelCountEl.textContent = `${novelRes.totalItems} Karya`;
-
-  const cerpenRes = renderEditorialCategoryGrid({
-    gridEl: cerpenGridEl,
-    countBadgeEl: cerpenCountEl,
-    books: buckets.Cerpen,
-    category: 'Cerpen',
-    searchQuery,
-    onOpenBook: opts.onOpenBook,
-    onQuickLike: opts.onQuickLike,
-    onResetFilter: opts.onResetFilter
-  });
-
-  const puisiRes = renderEditorialCategoryGrid({
-    gridEl: puisiGridEl,
-    countBadgeEl: puisiCountEl,
-    books: buckets.Puisi,
-    category: 'Puisi',
-    searchQuery,
-    onOpenBook: opts.onOpenBook,
-    onQuickLike: opts.onQuickLike,
-    onResetFilter: opts.onResetFilter
-  });
+  const results = {};
+  for (const [key, category] of sections) {
+    const state = shelfState[key] || { page: 1, pageSize: 4 };
+    results[key] = renderShelfSection({
+      sectionEl: document.querySelector(`[data-shelf-section="${key}"]`),
+      books: buckets[category],
+      category,
+      roleFilter,
+      searchQuery,
+      page: state.page,
+      pageSize: state.pageSize,
+      onSelectPage: (targetPage) => onSelectPage?.(key, targetPage),
+      onOpenBook,
+      onQuickLike,
+      onResetFilter
+    });
+  }
 
   if (jumpBarEl) {
     bindJumpBar(jumpBarEl);
-    const counts = {
-      novel: novelRes.totalItems,
-      cerpen: cerpenRes.totalItems,
-      puisi: puisiRes.totalItems
-    };
     for (const chip of jumpBarEl.querySelectorAll('[data-antologi-jump]')) {
       const key = chip.getAttribute('data-antologi-jump') || '';
       const label = key ? `${key.charAt(0).toUpperCase()}${key.slice(1)}` : '';
-      if (label && counts[key] !== undefined) chip.textContent = `${label} (${counts[key]})`;
+      if (label && results[key] !== undefined) chip.textContent = `${label} (${results[key].totalItems})`;
     }
   }
 
-  return novelRes;
+  return results;
 }

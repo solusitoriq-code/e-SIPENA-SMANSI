@@ -8,21 +8,26 @@ import { playSfx, stopSpeech } from './audio.js';
 import { incrementBookLike, loadPortalData } from './data-service.js';
 import { bindHorizontalSwipe, bindKeyboardAndModalControls, bindTopHudAndDrawer, updateAudioButtonUi } from './nav-controls.js';
 import {
-  openBookModal, renderAntologiSections, renderLibrarianPanel,
+  openBookModal, renderAntologiSections, renderCeritaGresikPanel, renderLibrarianPanel,
   renderMadingPanel, renderModels3dPanel, updateHeroKpis
 } from './public-views.js';
 import { renderSubmissionPanel } from './submission-views.js';
 import { renderAdminPanel } from './admin-views.js';
 import { closeModal, showToast } from './ui-utils.js';
 
-const VALID_TABS = new Set(['rak', 'pameran-3d', 'mading', 'pustakawan', 'kirim', 'kelola']);
+const VALID_TABS = new Set(['rak', 'pameran-3d', 'cerita-gresik', 'mading', 'pustakawan', 'kirim', 'kelola']);
+
+const SHELF_KEYS = ['novel', 'cerpen', 'puisi'];
 
 const appState = {
   activeTab: 'rak',
   bookRoleFilter: 'all',
   bookSearch: '',
-  bookPage: 1,
-  bookPageSize: APP_CONFIG.BOOK_PAGE_SIZE,
+  shelfState: {
+    novel: { page: 1, pageSize: APP_CONFIG.BOOK_PAGE_SIZE },
+    cerpen: { page: 1, pageSize: APP_CONFIG.BOOK_PAGE_SIZE },
+    puisi: { page: 1, pageSize: APP_CONFIG.BOOK_PAGE_SIZE }
+  },
   madingRoleFilter: 'all',
   madingPage: 1,
   snapshot: {
@@ -30,6 +35,7 @@ const appState = {
     books: [],
     models3d: [],
     librarianActivities: [],
+    ceritaGresikVideos: [],
     madingWorks: [],
     siteSettings: {}
   }
@@ -43,32 +49,24 @@ function triggerSwipeAnim(el, dir) {
   window.setTimeout(() => el.classList.remove('is-swipe-next', 'is-swipe-prev'), 240);
 }
 
+function getShelfGridEl(catKey) {
+  return document.querySelector(`[data-shelf-section="${catKey}"] [data-shelf-grid]`);
+}
+
 function renderBooksSection() {
-  const gridEl = document.getElementById('books-grid');
-  const result = renderAntologiSections({
-    gridEl,
-    cerpenGridEl: document.getElementById('cerpen-grid'),
-    puisiGridEl: document.getElementById('puisi-grid'),
-    jumpBarEl: document.getElementById('antologi-jump-bar'),
-    novelCountEl: document.getElementById('novel-count-badge'),
-    cerpenCountEl: document.getElementById('cerpen-count-badge'),
-    puisiCountEl: document.getElementById('puisi-count-badge'),
-    pageInfoEl: document.getElementById('books-page-info'),
-    prevBtn: document.getElementById('btn-books-prev'),
-    nextBtn: document.getElementById('btn-books-next'),
-    shelfPrevBtn: document.getElementById('btn-shelf-prev'),
-    shelfNextBtn: document.getElementById('btn-shelf-next'),
-    swipeCueEl: document.getElementById('books-swipe-cue'),
+  const results = renderAntologiSections({
     books: appState.snapshot.books,
     roleFilter: appState.bookRoleFilter,
     searchQuery: appState.bookSearch,
-    page: appState.bookPage,
-    pageSize: appState.bookPageSize,
-    onSelectPage: (targetPage) => {
-      const dir = targetPage > appState.bookPage ? 1 : -1;
-      appState.bookPage = targetPage;
+    shelfState: appState.shelfState,
+    jumpBarEl: document.getElementById('antologi-jump-bar'),
+    onSelectPage: (catKey, targetPage) => {
+      const state = appState.shelfState[catKey];
+      if (!state) return;
+      const dir = targetPage > state.page ? 1 : -1;
+      state.page = targetPage;
       renderBooksSection();
-      triggerSwipeAnim(gridEl, dir);
+      triggerSwipeAnim(getShelfGridEl(catKey), dir);
     },
     onOpenBook: (book, mode) => {
       openBookModal(book, {
@@ -96,7 +94,7 @@ function renderBooksSection() {
     onResetFilter: () => {
       appState.bookRoleFilter = 'all';
       appState.bookSearch = '';
-      appState.bookPage = 1;
+      for (const key of SHELF_KEYS) appState.shelfState[key].page = 1;
       const input = document.getElementById('book-search-input');
       if (input instanceof HTMLInputElement) input.value = '';
       for (const chip of document.querySelectorAll('#panel-rak [data-role-filter]')) {
@@ -105,7 +103,9 @@ function renderBooksSection() {
       renderBooksSection();
     }
   });
-  appState.bookPage = result.page;
+  for (const key of SHELF_KEYS) {
+    if (results[key]) appState.shelfState[key].page = results[key].page;
+  }
 }
 
 function openSubmissionTracking({ withSfx = true } = {}) {
@@ -142,6 +142,9 @@ function renderAllPublicPanels() {
   renderBooksSection();
   renderModels3dPanel(document.getElementById('models3d-container'), {
     models: appState.snapshot.models3d
+  });
+  renderCeritaGresikPanel(document.getElementById('cerita-gresik-container'), {
+    videos: appState.snapshot.ceritaGresikVideos
   });
   renderMadingSection();
   renderLibrarianPanel(document.getElementById('librarian-container'), {
@@ -213,12 +216,24 @@ export function switchTab(tabId, { focusPanel = false } = {}) {
   window.dispatchEvent(new CustomEvent('esipena:tab-changed', { detail: { tab: nextTab } }));
 }
 
+function stepShelfPage(catKey, delta, sfxKind = 'click') {
+  const state = appState.shelfState[catKey];
+  if (!state) return;
+  const prevPage = state.page;
+  state.page = Math.max(1, state.page + delta);
+  renderBooksSection();
+  if (state.page !== prevPage) {
+    playSfx(sfxKind);
+    triggerSwipeAnim(getShelfGridEl(catKey), delta);
+  }
+}
+
 function bindBookAndMadingFilters() {
   for (const chip of document.querySelectorAll('#panel-rak [data-role-filter]')) {
     chip.addEventListener('click', () => {
       playSfx('click');
       appState.bookRoleFilter = chip.getAttribute('data-role-filter') || 'all';
-      appState.bookPage = 1;
+      appState.shelfState.novel.page = 1;
       for (const c of document.querySelectorAll('#panel-rak [data-role-filter]')) {
         c.classList.toggle('is-active', c === chip);
       }
@@ -228,31 +243,32 @@ function bindBookAndMadingFilters() {
 
   document.getElementById('book-search-input')?.addEventListener('input', (event) => {
     appState.bookSearch = event.target instanceof HTMLInputElement ? event.target.value : '';
-    appState.bookPage = 1;
+    for (const key of SHELF_KEYS) appState.shelfState[key].page = 1;
     renderBooksSection();
   });
 
-  const stepBookPage = (delta, sfxKind = 'click') => {
-    const prevPage = appState.bookPage;
-    appState.bookPage = Math.max(1, appState.bookPage + delta);
-    renderBooksSection();
-    if (appState.bookPage !== prevPage) {
-      playSfx(sfxKind);
-      triggerSwipeAnim(document.getElementById('books-grid'), delta);
-    }
-  };
+  for (const catKey of SHELF_KEYS) {
+    const secEl = document.querySelector(`[data-shelf-section="${catKey}"]`);
+    if (!secEl) continue;
 
-  document.getElementById('btn-books-prev')?.addEventListener('click', () => stepBookPage(-1));
-  document.getElementById('btn-books-next')?.addEventListener('click', () => stepBookPage(1));
-  document.getElementById('btn-shelf-prev')?.addEventListener('click', () => stepBookPage(-1));
-  document.getElementById('btn-shelf-next')?.addEventListener('click', () => stepBookPage(1));
+    secEl.querySelector('[data-shelf-prev]')?.addEventListener('click', () => stepShelfPage(catKey, -1));
+    secEl.querySelector('[data-shelf-next]')?.addEventListener('click', () => stepShelfPage(catKey, 1));
+    secEl.querySelector('[data-shelf-edge-prev]')?.addEventListener('click', () => stepShelfPage(catKey, -1));
+    secEl.querySelector('[data-shelf-edge-next]')?.addEventListener('click', () => stepShelfPage(catKey, 1));
+    secEl.querySelector('[data-shelf-pagesize]')?.addEventListener('click', () => {
+      playSfx('click');
+      const state = appState.shelfState[catKey];
+      state.pageSize = state.pageSize === 4 ? 8 : 4;
+      state.page = 1;
+      renderBooksSection();
+    });
 
-  const booksGridEl = document.getElementById('books-grid');
-  bindHorizontalSwipe(booksGridEl, {
-    isEnabled: () => appState.activeTab === 'rak',
-    onNext: () => stepBookPage(1, 'pop'),
-    onPrev: () => stepBookPage(-1, 'pop')
-  });
+    bindHorizontalSwipe(secEl.querySelector('[data-shelf-grid]'), {
+      isEnabled: () => appState.activeTab === 'rak',
+      onNext: () => stepShelfPage(catKey, 1, 'pop'),
+      onPrev: () => stepShelfPage(catKey, -1, 'pop')
+    });
+  }
 
   const madingGridEl = document.getElementById('mading-grid');
   bindHorizontalSwipe(madingGridEl, {
@@ -281,16 +297,6 @@ function bindBookAndMadingFilters() {
         renderMadingSection();
       }
     }
-  });
-
-  const pageSizeBtn = document.getElementById('btn-book-pagesize');
-  pageSizeBtn?.addEventListener('click', () => {
-    playSfx('click');
-    appState.bookPageSize = appState.bookPageSize === 4 ? 8 : 4;
-    appState.bookPage = 1;
-    pageSizeBtn.textContent = `${appState.bookPageSize} / Hal`;
-    pageSizeBtn.setAttribute('aria-pressed', appState.bookPageSize === 8 ? 'true' : 'false');
-    renderBooksSection();
   });
 
   for (const chip of document.querySelectorAll('#mading-role-filters [data-mading-role]')) {
@@ -353,8 +359,9 @@ async function initApp() {
   bindKeyboardAndModalControls({
     onTurnBookPage: (delta) => {
       if (appState.activeTab !== 'rak') return;
-      appState.bookPage = Math.max(1, appState.bookPage + delta);
-      renderBooksSection();
+      const focusedCat = document.activeElement?.closest('[data-shelf-section]')?.getAttribute('data-shelf-section');
+      const catKey = SHELF_KEYS.includes(focusedCat || '') ? focusedCat : 'novel';
+      stepShelfPage(catKey, delta);
     }
   });
 

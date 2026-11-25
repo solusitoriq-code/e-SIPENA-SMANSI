@@ -11,7 +11,6 @@ import { normalizeActivityPhotos } from './data-service.js';
 import { openModel3dModal } from './model-3d-modal.js';
 import {
   bindSpeechToggleButton,
-  buildWhatsAppUrl,
   createIcon,
   escapeHtml,
   extractPlainLiteraryText,
@@ -63,7 +62,6 @@ export function renderModels3dPanel(container, { models = [] } = {}) {
       `;
     })
     .join('')}</div>`;
-  {/* <p class="model3d-card-intro">${escapeHtml(item.introduction || '')}</p> */ }
 
   container.onclick = (event) => {
     const target = event.target instanceof HTMLElement ? event.target : null;
@@ -257,22 +255,18 @@ export function renderMadingPanel(
 const FALLBACK_ACTIVITY_PHOTO = 'assets/images/logo-smansi.webp';
 
 /**
- * Merender panel Sudut Pustakawan berisi dokumentasi kegiatan perpustakaan multi-foto
- * serta kontak resmi admin perpustakaan.
+ * Merender panel Sudut Pustakawan berisi postingan dokumentasi foto kegiatan perpustakaan.
  * @param {HTMLElement | null} container
  * @param {{ siteSettings?: Record<string, any>, activities?: any[] }} [options]
  */
 export function renderLibrarianPanel(container, { siteSettings = {}, activities = [] } = {}) {
   if (!container) return;
-  const school = siteSettings.school_profile || {};
-  const kpi = siteSettings.kpi_stats || {};
   const contact = siteSettings.contact_admin || {};
-  const corner = siteSettings.librarian_corner || {};
-  const serviceHours = corner.service_hours || 'Senin - Jumat, 07.00 - 15.00 WIB';
-  const waUrl = buildWhatsAppUrl(contact, 'saya ingin berkonsultasi mengenai layanan perpustakaan dan kegiatan literasi.');
 
   const panelBadge = document.querySelector('#panel-pustakawan .panel-header .panel-badge');
-  if (panelBadge) panelBadge.textContent = serviceHours;
+  if (panelBadge) {
+    panelBadge.textContent = activities.length ? `${activities.length} Kegiatan` : 'Galeri Foto';
+  }
 
   const cardsHtml = activities.length
     ? activities
@@ -313,30 +307,11 @@ export function renderLibrarianPanel(container, { siteSettings = {}, activities 
     : `
       <article class="empty-stage-note librarian-empty-card">
         <h3>Belum Ada Kegiatan Terpublikasi</h3>
-        <p>Dokumentasi kegiatan literasi dan perpustakaan akan ditampilkan di sini setelah ditambahkan oleh pengelola.</p>
+        <p>Dokumentasi foto kegiatan literasi dan perpustakaan akan ditampilkan di sini setelah ditambahkan oleh pengelola.</p>
       </article>
     `;
 
-  container.innerHTML = `
-    <div class="librarian-layout">
-      <div class="librarian-docs-grid">
-        ${cardsHtml}
-      </div>
-      <aside class="librarian-sidebar">
-        <section class="librarian-info-card">
-          <h3>${escapeHtml(school.library_name || APP_CONFIG.SCHOOL_DEFAULTS.libraryName)}</h3>
-          <p class="librarian-community">${escapeHtml(school.community_name || APP_CONFIG.SCHOOL_DEFAULTS.communityName)}</p>
-          <dl class="librarian-dl">
-            <div><dt>Jam Layanan</dt><dd>${escapeHtml(serviceHours)}</dd></div>
-            <div><dt>Alamat</dt><dd>${escapeHtml(school.address || 'Jl. Kanjeng Pangeran No. 1, Sidayu, Gresik')}</dd></div>
-            <div><dt>Surel Resmi</dt><dd>${escapeHtml(contact.email || 'perpustakaan@sman1sidayu.sch.id')}</dd></div>
-            <div><dt>Rekam Jejak 2025</dt><dd><strong>${escapeHtml(kpi.books_2025_count ?? 23)} Buku Karya 2025</strong> menjadi fondasi lahirnya <strong>${escapeHtml(kpi.novels_2026_count ?? 12)} Novel 2026</strong>.</dd></div>
-          </dl>
-          <a class="primary-btn inline-action-btn librarian-wa-btn" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">${createIcon('whatsapp')}<span>Hubungi ${escapeHtml(contact.whatsapp_label || 'Pustakawan')}</span></a>
-        </section>
-      </aside>
-    </div>
-  `;
+  container.innerHTML = `<div class="librarian-docs-grid">${cardsHtml}</div>`;
 
   container.onclick = (event) => {
     const btn = event.target instanceof HTMLElement ? event.target.closest('[data-action="open-activity"]') : null;

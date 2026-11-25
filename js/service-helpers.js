@@ -150,6 +150,10 @@ export function getDemoOverrides() {
       stored?.librarianActivities && typeof stored.librarianActivities === 'object' ? stored.librarianActivities : {},
     createdActivities: Array.isArray(stored?.createdActivities) ? stored.createdActivities : [],
     deletedActivities: Array.isArray(stored?.deletedActivities) ? stored.deletedActivities : [],
+    ceritaGresikVideos:
+      stored?.ceritaGresikVideos && typeof stored.ceritaGresikVideos === 'object' ? stored.ceritaGresikVideos : {},
+    createdCeritaVideos: Array.isArray(stored?.createdCeritaVideos) ? stored.createdCeritaVideos : [],
+    deletedCeritaVideos: Array.isArray(stored?.deletedCeritaVideos) ? stored.deletedCeritaVideos : [],
     siteSettings: stored?.siteSettings && typeof stored.siteSettings === 'object' ? stored.siteSettings : {},
     submissions: stored?.submissions && typeof stored.submissions === 'object' ? stored.submissions : {}
   };
@@ -180,6 +184,13 @@ export function saveDemoOverride(bucket, itemId, patch) {
     const idx = current.createdActivities.findIndex((a) => a.id === itemId);
     if (idx >= 0) {
       current.createdActivities[idx] = { ...current.createdActivities[idx], ...patch };
+      return setDemoOverrides(current);
+    }
+  }
+  if (bucket === 'ceritaGresikVideos') {
+    const idx = current.createdCeritaVideos.findIndex((v) => v.id === itemId);
+    if (idx >= 0) {
+      current.createdCeritaVideos[idx] = { ...current.createdCeritaVideos[idx], ...patch };
       return setDemoOverrides(current);
     }
   }
@@ -227,6 +238,7 @@ export function applyDemoOverridesToDataset({
   books = [],
   models3d = [],
   librarianActivities = [],
+  ceritaGresikVideos = [],
   madingWorks = [],
   localSubmissions = [],
   siteSettings = {},
@@ -236,6 +248,7 @@ export function applyDemoOverridesToDataset({
   const deletedBookSet = new Set(ov.deletedBooks);
   const deletedModelsSet = new Set(ov.deletedModels3d);
   const deletedActivitySet = new Set(ov.deletedActivities);
+  const deletedCeritaSet = new Set(ov.deletedCeritaVideos);
 
   const allBooks = [...books, ...ov.createdBooks]
     .filter((b) => b && !deletedBookSet.has(b.id))
@@ -252,6 +265,11 @@ export function applyDemoOverridesToDataset({
     .map((a) => (ov.librarianActivities[a.id] ? { ...a, ...ov.librarianActivities[a.id] } : a))
     .filter((a) => includeHidden || a.is_active !== false);
 
+  const allCeritaVideos = [...ceritaGresikVideos, ...ov.createdCeritaVideos]
+    .filter((v) => v && !deletedCeritaSet.has(v.id))
+    .map((v) => (ov.ceritaGresikVideos[v.id] ? { ...v, ...ov.ceritaGresikVideos[v.id] } : v))
+    .filter((v) => includeHidden || v.is_active !== false);
+
   const mergedSettings = structuredClone(siteSettings || {});
   for (const [key, val] of Object.entries(ov.siteSettings)) {
     if (val && typeof val === 'object') {
@@ -264,6 +282,7 @@ export function applyDemoOverridesToDataset({
     books: allBooks,
     models3d: allModels3d,
     librarianActivities: allActivities,
+    ceritaGresikVideos: allCeritaVideos,
     madingWorks: mergedMading,
     siteSettings: mergedSettings
   };

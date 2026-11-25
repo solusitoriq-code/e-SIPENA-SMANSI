@@ -90,7 +90,7 @@ export function openModal({ title, html, headerTabsHtml = '', wide = false, full
 
   const isFs = Boolean(fullscreen);
   const showFsHeader = isFs || Boolean(allowFullscreen);
-  dialog.classList.remove('is-reading-mode');
+  dialog.classList.remove('is-reading-mode', 'is-model3d-modal');
   dialog.classList.toggle('app-modal-wide', Boolean(wide));
   dialog.classList.toggle('app-modal-fullscreen', isFs);
   backdrop.classList.toggle('is-modal-fullscreen', isFs);
@@ -151,7 +151,7 @@ export function closeModal(force = false) {
 
   backdrop.hidden = true;
   backdrop.classList.remove('is-modal-fullscreen');
-  if (dialog) dialog.classList.remove('app-modal-wide', 'app-modal-fullscreen', 'is-reading-mode');
+  if (dialog) dialog.classList.remove('app-modal-wide', 'app-modal-fullscreen', 'is-reading-mode', 'is-model3d-modal');
   if (tabsEl) { tabsEl.hidden = true; tabsEl.innerHTML = ''; }
   const sizeBtn = document.getElementById('modal-toggle-size');
   const fsBtn = document.getElementById('modal-browser-fs');
